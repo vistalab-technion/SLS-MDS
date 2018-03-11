@@ -3,10 +3,9 @@ import torch
 from Calculations import Calculations
 from scipy.spatial.distance import pdist, squareform
 import matplotlib.pyplot as plt
-import SignalType
+from SignalType import SignalType
 from torch.autograd import Variable
-import math
-
+from scipy import linalg
 
 class MDS:
     # mds_params = MdsParams.MdsParams()
@@ -45,7 +44,7 @@ class MDS:
             # v_s_s = torch.matmul(torch.matmul(torch.transpose(mat_s, 0, 1), v_s), mat_s)
             v_s_p = torch.matmul(torch.matmul(torch.transpose(phi_s, 0, 1), v_s), phi_s)
             # v_s_p_i = self.calc.compute_mat_pinv(v_s_p, p)
-            v_s_p_i_np = np.linalg.pinv(v_s_p.data.cpu().numpy())
+            v_s_p_i_np = linalg.pinv(v_s_p.data.cpu().numpy())
             v_s_p_i = torch.FloatTensor(v_s_p_i_np).cuda()
             # z = torch.matmul(torch.matmul(v_s_p_i, torch.transpose(phi_s, 0, 1).data), torch.transpose(mat_s, 0, 1))
             # v_s_x0_s = torch.matmul(torch.matmul(v_s, mat_s), x0_s)
@@ -70,12 +69,16 @@ class MDS:
                 dx_s_mat = torch.FloatTensor(squareform(pdist(tmp_x_s, 'euclidean'))).cuda()  # TODO: replace with dedicated function
                 # check convergence
                 new_stress = self.compute_stress(d_s, dx_s_mat, w_s)
-                converged = (new_stress <= self.mds_params.a_tol) or \
-                            (1 - (new_stress / old_stress) <= self.mds_params.r_tol) or \
-                            (self.mds_params.max_iter <= iter_count)
+                # converged = (new_stress <= self.mds_params.a_tol) or \
+                #             (1 - (new_stress / old_stress) <= self.mds_params.r_tol) or \
+                #             (self.mds_params.max_iter <= iter_count)
+                converged = self.mds_params.max_iter <= iter_count
                 old_stress = new_stress
                 self.stress_list.append(old_stress)
                 iter_count += 1
+
+                plt.plot(self.stress_list)
+                plt.show()
 
                 # converged = (new_stress <= self.mds_params.a_tol) or \
                 #             (1 - (new_stress / old_stress) <= self.mds_params.r_tol) or \
@@ -86,9 +89,9 @@ class MDS:
                     if self.mds_params.compute_full_stress_flag:
                         intermediate_results_list.append(x)
 
-                # if self.mds_params.plot_flag:
-                #     self.plot_embedding(x0.data + torch.matmul(phi.data, alpha))
-                #     # TODO: plot full embedding
+                if self.mds_params.plot_flag:
+                    self.plot_embedding(x0.data + torch.matmul(phi.data, alpha))
+                    # TODO: plot full embedding
 
         if self.mds_params.compute_full_stress_flag:
             for intermediate_x in intermediate_results_list:
