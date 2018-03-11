@@ -21,9 +21,12 @@ class MdsParams:
     def __init__(self, shape):
         self.shape = shape
 
-    def set_p_q(self, p):
+    def set_p_q(self, p, q=None):
         self.p = p
-        self.q = np.multiply(self.c,p)
+        if q is None:
+            self.q = np.multiply(self.c,p)
+        else:
+            self.q = q
 
     def set_optim_param(self, max_iter, a_tol, r_tol):
         self.max_iter = max_iter

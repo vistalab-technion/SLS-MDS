@@ -34,6 +34,7 @@ class Shape:
             self.compute_adjacency_mat()
             self.weights = Variable(torch.ones((self.size, self.size))).type(torch.FloatTensor).cuda()
 
+
     def compute_laplacian(self, l=None):
         # if l is None:
         #     self.dist_mat = self.calc.dist_mat(self.mesh, self.size)
@@ -55,32 +56,41 @@ class Shape:
     def sample_mesh(self, k,  d_mat=None):
         print("sample_mesh\n")
 
-        compute_d_mat_flag = False
-        if d_mat is None:
-            compute_d_mat_flag = True
+        if k == len(self.mesh.vertices):
+            set_c = range(1, len(self.mesh.vertices))
+            #TODO: compute geodesic distances
+            if d_mat is None:
+                print('You need to provide distance matrix')
 
-        x_idx = random.randint(0, self.size)  # choose index of vertex from 0 to sizeof(vertices)
-        set_c = [x_idx]
-        distances_from_c = np.empty(self.size, dtype=np.float32)
-        distances_from_c.fill(np.inf)
-        # r = 200
-        i = 0
-        if compute_d_mat_flag:
-            d_mat = np.zeros((self.size, self.size))
+        else:
 
-        while i < k-1:
+            compute_d_mat_flag = False
+            if d_mat is None:
+                compute_d_mat_flag = True
+
+            x_idx = random.randint(0, self.size)  # choose index of vertex from 0 to sizeof(vertices)
+            set_c = [x_idx]
+            distances_from_c = np.empty(self.size, dtype=np.float32)
+            distances_from_c.fill(np.inf)
+            # r = 200
+            i = 0
             if compute_d_mat_flag:
-                d = self.compute_dist(x_idx, self.mesh)
-                d_mat[:, x_idx] = d  # saving distances ,if distance map is available, no need to compute distances from points to mesh
-            else:
-                d = d_mat[:, x_idx]
-            distances_from_c = np.minimum(distances_from_c, d)
+                d_mat = np.zeros((self.size, self.size))
 
-            r = max(distances_from_c)
-            x_idx = np.where(distances_from_c == r)[0][0]
-            set_c.append(x_idx)
+            while i < k-1:
+                if compute_d_mat_flag:
+                    d = self.compute_dist(x_idx, self.mesh)
+                    d_mat[:, x_idx] = d  # saving distances ,if distance map is available, no need to compute distances from points to mesh
+                else:
+                    d = d_mat[:, x_idx]
 
-            i += 1
+                distances_from_c = np.minimum(distances_from_c, d)
+                r = max(distances_from_c)
+                x_idx = np.where(distances_from_c == r)[0][0]
+                set_c.append(x_idx)
+
+                i += 1
+
         return [set_c, d_mat]
 
     # @staticmethod

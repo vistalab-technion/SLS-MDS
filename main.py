@@ -33,17 +33,19 @@ def main():
     #
     # print(tmp[list(range(3)), list(range(3))])
 
-    shape = Shape("input/dog.off")
+    shape = Shape(filename="input/cat0.off")
+
+    tmp_shape = Shape("input/cat3.off")
+
     # shape.mesh.show()
     # TODO: replace with geodesic distance later
-    normal = np.random.normal(0, 1, size=(shape.size, 3))
+    # normal = np.random.normal(0, 1, size=(shape.size, 3))
     # print(normal)
-    tmp = shape.mesh.vertices + normal
-    d_mat_input = squareform(pdist(tmp, metric='euclidean'))  # TODO: replace with dedicated function
+    d_mat_input = squareform(pdist(tmp_shape.mesh.vertices, metric='euclidean'))  # TODO: replace with dedicated function
 
     mds_params = MdsParams.MdsParams(shape)
 
-    mds_params.set_p_q([300])
+    mds_params.set_p_q([len(shape.mesh.vertices)], [len(shape.mesh.vertices)])
     mds_params.set_optim_param(1000, 0, 0)
     mds_params.set_shape(shape)
     mds_params.set_compute_full_stress_flag(True)
@@ -54,7 +56,9 @@ def main():
     # samples_t = torch.from_numpy(np.array(samples))
     mds_params.samples(samples)
     # create subspace
-    shape.compute_subspace(max(mds_params.p))
+
+    # shape.compute_subspace(max(mds_params.p)) # TODO: remove comment
+    shape.evecs = np.eye(shape.size)
 
     phi = np.real(shape.evecs)
     phi_t = Variable(torch.from_numpy(phi).type(torch.FloatTensor)).cuda()
@@ -65,7 +69,6 @@ def main():
     new_x = mds.algorithm(d_mat_t, shape.weights, x0, phi_t)
     # shape.mesh.vertices = new_x.cpu().numpy()
     # shape.mesh.show()
-    #
     # plt.plot(mds.stress_list)
     # plt.show()
 if __name__ == '__main__':
