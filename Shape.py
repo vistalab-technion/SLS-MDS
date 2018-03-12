@@ -32,8 +32,7 @@ class Shape:
             self.dim = len(self.mesh.vertices[0])
             self.compute_laplacian()
             self.compute_adjacency_mat()
-            self.weights = Variable(torch.ones((self.size, self.size))).type(torch.FloatTensor).cuda()
-
+            self.weights = np.ones([self.size, self.size]) #Variable(torch.ones((self.size, self.size))).type(torch.FloatTensor).cuda()
 
     def compute_laplacian(self, l=None):
         # if l is None:
@@ -51,14 +50,14 @@ class Shape:
         # stiffness_mat_cpu = self.stiffness_mat.data.cpu().numpy()
         # mass_mat_cpu = self.mass_mat.data.cpu().numpy()
         [self.eigs, self.evecs] = sp.eigs(self.stiffness_mat, k, self.mass_mat, sigma=0, which='LM')  # gisma=0 gives 1/lambda -> LM gives smallest eigs
-        # TODO fix eigs (put '-' and 1\)
+        # TODO fix eigs (put '-' and 1/)
 
     def sample_mesh(self, k,  d_mat=None):
         print("sample_mesh\n")
 
         if k == len(self.mesh.vertices):
-            set_c = range(1, len(self.mesh.vertices))
-            #TODO: compute geodesic distances
+            set_c = range(0, len(self.mesh.vertices))
+            # TODO: compute geodesic distances
             if d_mat is None:
                 print('You need to provide distance matrix')
 
@@ -102,9 +101,9 @@ class Shape:
     #         if distances_from_c[i] > d:  # update the distances from c with the new v0
     #             distances_from_c[i] = d
 
-    def compute_dist(self, v0, mesh):
-        d = []
-        return d
+    # def compute_dist(self, v0, mesh):
+    #     d = []
+    #     return d
 
     def set_signal_type(self, signal_type):
         self.shape.signal_type = signal_type

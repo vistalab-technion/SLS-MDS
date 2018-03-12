@@ -33,9 +33,9 @@ def main():
     #
     # print(tmp[list(range(3)), list(range(3))])
 
-    shape = Shape(filename="input/cat0.off")
+    shape = Shape(filename="input/sphere.off")
 
-    tmp_shape = Shape("input/cat3.off")
+    tmp_shape = Shape("input/sphere_bump.off")
 
     # shape.mesh.show()
     # TODO: replace with geodesic distance later
@@ -57,16 +57,17 @@ def main():
     mds_params.samples(samples)
     # create subspace
 
-    # shape.compute_subspace(max(mds_params.p)) # TODO: remove comment
+    # shape.compute_subspace(max(mds_params. p))  # TODO: remove comment
     shape.evecs = np.eye(shape.size)
 
     phi = np.real(shape.evecs)
-    phi_t = Variable(torch.from_numpy(phi).type(torch.FloatTensor)).cuda()
-    x0 = Variable(torch.from_numpy(shape.mesh.vertices).type(torch.FloatTensor)).cuda()
-    d_mat_t = Variable(torch.FloatTensor(d_mat)).cuda()
+    # phi_t = Variable(torch.from_numpy(phi).type(torch.FloatTensor)).cuda()
+    # x0 = Variable(torch.from_numpy(shape.mesh.vertices).type(torch.FloatTensor)).cuda()
+    x0 = shape.mesh.vertices
+    # d_mat_t = Variable(torch.FloatTensor(d_mat)).cuda()
     mds = MDS.MDS(mds_params)
 
-    new_x = mds.algorithm(d_mat_t, shape.weights, x0, phi_t)
+    new_x = mds.algorithm(d_mat, shape.weights, x0, phi)
     # shape.mesh.vertices = new_x.cpu().numpy()
     # shape.mesh.show()
     # plt.plot(mds.stress_list)
