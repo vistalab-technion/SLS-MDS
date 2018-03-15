@@ -24,7 +24,7 @@ class MdsParams:
     def set_p_q(self, p, q=None):
         self.p = p
         if q is None:
-            self.q = np.multiply(self.c,p)
+            self.q = np.multiply(self.c, p)
         else:
             self.q = q
 
@@ -34,7 +34,7 @@ class MdsParams:
         self.r_tol = r_tol
 
     def samples(self, samples_array):
-        self.samples_array = torch.from_numpy(np.array(samples_array)).type(torch.LongTensor).cuda()
+        self.samples_array = samples_array
 
     def set_shape(self, shape):
         self.shape = shape
