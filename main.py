@@ -4,9 +4,11 @@ import MdsParams
 from Shape import Shape
 import MDS
 import numpy as np
+import scipy.io as sio
+
 from scipy.spatial.distance import pdist, squareform
-from torch.autograd import Variable
-import torch
+#from torch.autograd import Variable
+#import torch
 import matplotlib.pyplot as plt
 
 
@@ -33,7 +35,7 @@ def main():
     #
     # print(tmp[list(range(3)), list(range(3))])
 
-    shape = Shape(filename="input/sphere.off")
+    shape = Shape(filename="input/cat3.off")
 
     tmp_shape = Shape("input/sphere_bump.off")
 
@@ -41,12 +43,14 @@ def main():
     # TODO: replace with geodesic distance later
     # normal = np.random.normal(0, 1, size=(shape.size, 3))
     # print(normal)
-    d_mat_input = squareform(pdist(tmp_shape.mesh.vertices, metric='euclidean'))  # TODO: replace with dedicated function
+
+    #d_mat_input = squareform(pdist(tmp_shape.mesh.vertices, metric='euclidean'))  # TODO: replace with dedicated function
+    d_mat_input = sio.loadmat("input/D_cat3.mat")['D']
 
     mds_params = MdsParams.MdsParams(shape)
 
-    mds_params.set_p_q([len(shape.mesh.vertices)], [len(shape.mesh.vertices)])
-    mds_params.set_optim_param(1000, 0, 0)
+    mds_params.set_p_q([300], [600]) #[len(shape.mesh.vertices)])
+    mds_params.set_optim_param(50, 0, 0)
     mds_params.set_shape(shape)
     mds_params.set_compute_full_stress_flag(True)
     mds_params.set_compute_full_embedding_flag(True)
@@ -57,8 +61,8 @@ def main():
     mds_params.samples(samples)
     # create subspace
 
-    # shape.compute_subspace(max(mds_params. p))  # TODO: remove comment
-    shape.evecs = np.eye(shape.size)
+    shape.compute_subspace(max(mds_params. p))  # TODO: remove comment
+    #shape.evecs = np.eye(shape.size)
 
     phi = np.real(shape.evecs)
     # phi_t = Variable(torch.from_numpy(phi).type(torch.FloatTensor)).cuda()

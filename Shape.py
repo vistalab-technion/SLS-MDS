@@ -1,18 +1,18 @@
 import scipy.sparse.linalg as sp
-import torch
+#import torch
 import trimesh
 import numpy as np
-from torch.autograd import Variable
+#from torch.autograd import Variable
 from Calculations import Calculations
 import random
-from geopy.distance import vincenty
 from scipy.spatial.distance import pdist
 
 from SignalType import SignalType
 
 
 class Shape:
-    mesh = trimesh.Trimesh()
+    #mesh = trimesh.Trimesh()
+    mesh = []
     mass_mat = np.array([])
     stiffness_mat = np.array([])
     adjacency_mat = np.array([])
@@ -24,14 +24,26 @@ class Shape:
     evecs = []
     signal_type = SignalType.MESH
 
+    # mesh class
+    class Mesh:
+        faces = []
+        vertices = []
+
+        def __init__(self, filename=None):
+            [vertices, faces] = Shape.read_off(open(filename, 'r'))
+            self.vertices = np.asarray(vertices)
+            self.faces = np.asarray(faces)
+
     def __init__(self, filename=None):
         if filename is not None:
-            self.mesh = trimesh.load_mesh(filename)
+            #self.mesh = trimesh.load_mesh(filename)
+            self.mesh = self.Mesh(filename)
             self.calc = Calculations()
+
             self.size = len(self.mesh.vertices)
             self.dim = len(self.mesh.vertices[0])
             self.compute_laplacian()
-            self.compute_adjacency_mat()
+            #self.compute_adjacency_mat()
             self.weights = np.ones([self.size, self.size]) #Variable(torch.ones((self.size, self.size))).type(torch.FloatTensor).cuda()
 
     def compute_laplacian(self, l=None):
@@ -113,3 +125,18 @@ class Shape:
         for e in self.mesh.edges:
             adjacency_mat[e[0]][e[1]] = 1
         self.adjacency_mat = adjacency_mat
+
+    def read_off(file):
+        if 'OFF' != file.readline().strip():
+            raise ValueError('Not a valid OFF header')
+        n_verts, n_faces, n_dontknow = tuple([int(s) for s in file.readline().strip().split(' ')])
+        verts = []
+        for i_vert in range(n_verts):
+            verts.append([float(s) for s in file.readline().strip().split(' ')])
+        faces = []
+        for i_face in range(n_faces):
+            faces.append([int(s) for s in file.readline().strip().split(' ')][1:])
+        return verts, faces
+
+
+

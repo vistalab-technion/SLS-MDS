@@ -1,19 +1,22 @@
 import numpy as np
-import torch
+#import torch
 import trimesh
-from torch.autograd import Variable
+#from torch.autograd import Variable
 from Shape import Shape
 from SignalType import SignalType
 
 
 class MdsParams:
-    p = torch.FloatTensor
+    #p = torch.FloatTensor
+    p = []
     c = 2
-    q = torch.FloatTensor
+    #q = torch.FloatTensor
+    q = []
     max_iter = 10000
     a_tol = 0
     r_tol = 1e-8
-    samples_array = torch.LongTensor
+    #samples_array = torch.LongTensor
+    samples_array = []
     plot_flag = False
     compute_full_stress_flag = False
     compute_full_embedding_flag = compute_full_stress_flag

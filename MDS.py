@@ -1,12 +1,18 @@
 import numpy as np
-import torch
+#import torch
 from Calculations import Calculations
 from scipy.spatial.distance import pdist, squareform
 import matplotlib.pyplot as plt
 from SignalType import SignalType
-from torch.autograd import Variable
+#from torch.autograd import Variable
 from scipy import linalg
+from mpl_toolkits.mplot3d import Axes3D
 
+import pyglet
+import plotly.plotly as py
+from plotly.graph_objs import *
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.tri as mtri
 
 class MDS:
     # mds_params = MdsParams.MdsParams()
@@ -26,6 +32,7 @@ class MDS:
 
         dim = np.size(x0, 1)
         # alpha = torch.Tensor().cuda()
+        alpha = np.zeros([p_array[0], self.mds_params.shape.dim])
         converged = False
         stress_values = []
         intermediate_results_list = []
@@ -35,10 +42,10 @@ class MDS:
             p = p_array[i]  # p is the number of frequencies\ basis vectors
 
             # tmp = torch.zeros((p - len(alpha))).cuda()
-            # alpha = torch.cat([alpha, tmp])  # from_numpy(np.concatenate(alpha, tmp))
+            # alpha = torch.cat([alpha, tmp])  # from_numpy(np.concatenate(alpha, tmp))  #TODO: concatenate alpha
             x0_s = x0[samples[0:q], :]
             w_s = self.compute_sub(weights, samples)
-            phi_s = phi[samples[0:q], :]
+            phi_s = phi[samples[0:q], 0:p]
             d_s = self.compute_sub(distances, samples)  # distances[samples[0:q], samples[0:q]]
             v_s = self.compute_v(w_s)
             # v_s_p = torch.matmul(torch.matmul(torch.transpose(phi_s, 0, 1), v_s), phi_s)
@@ -50,6 +57,7 @@ class MDS:
             # v_s_x0_s = torch.matmul(torch.matmul(v_s, mat_s), x0_s)
             # z = torch.matmul(v_s_p_i, torch.transpose(phi_s.data, 0, 1))
             z = np.matmul(v_s_p_i, np.transpose(phi_s))
+            #z = (1/q)*np.transpose(phi_s)
             # v_s_x0_s = torch.matmul(v_s, x0_s)
             v_s_x0_s = np.matmul(v_s, x0_s)
             x_s = x0_s
@@ -61,6 +69,13 @@ class MDS:
             self.stress_list.append(old_stress)
 
             while not converged:
+
+                if self.mds_params.plot_flag:
+                    # self.plot_embedding(x0.data + torch.matmul(phi.data, alpha))
+                    self.plot_embedding(x0 + np.matmul(phi[:, 0:p], alpha))
+                    # TODO: plot full embedding
+
+
                 b_s = self.compute_mat_b(d_s, dx_s_mat, w_s)
                 # y = torch.matmul(torch.matmul(b_s, mat_s), x_s.data).sub(v_s_x0_s.data)
                 # y = torch.matmul(b_s, x_s.data).sub(v_s_x0_s.data)
@@ -84,8 +99,8 @@ class MDS:
                 self.stress_list.append(old_stress)
                 iter_count += 1
 
-                plt.plot(self.stress_list)
-                plt.show()
+                #plt.plot(self.stress_list)
+                #plt.show()
 
                 # converged = (new_stress <= self.mds_params.a_tol) or \
                 #             (1 - (new_stress / old_stress) <= self.mds_params.r_tol) or \
@@ -93,15 +108,12 @@ class MDS:
 
                 if self.mds_params.compute_full_embedding_flag:
                     # x = (x0.data + torch.matmul(phi.data, alpha)).cpu().numpy()
-                    x = x0 + np.matmul(phi, alpha)
+                    x = x0 + np.matmul(phi[:, 0:p], alpha)
                     if self.mds_params.compute_full_stress_flag:
                         intermediate_results_list.append(x)
 
-                if self.mds_params.plot_flag:
-                    # self.plot_embedding(x0.data + torch.matmul(phi.data, alpha))
-                    self.plot_embedding(x0 + np.matmul(phi, alpha))
-                    # TODO: plot full embedding
 
+        '''
         if self.mds_params.compute_full_stress_flag:
             for intermediate_x in intermediate_results_list:
                 # dx_mat = torch.FloatTensor(squareform(pdist(intermediate_x, 'euclidean'))).cuda()  # TODO: replace with dedicated function
@@ -110,10 +122,15 @@ class MDS:
                 full_stress = self.compute_stress(distances, dx_mat, weights)
                 stress_values.append(full_stress)
         plt.plot(stress_values)
-        plt.show()
+        plt.show(block=False)
+        plt.close()
+        #plt.draw()
+
+        '''
+
 
         # return x0.data + torch.matmul(phi.data, alpha)
-        return x0 + np.matmul(phi, alpha)
+        return x0 + np.matmul(phi[:, 0:p], alpha)
 
     @staticmethod
     def compute_v(w_mat):
@@ -179,7 +196,20 @@ class MDS:
             x_mesh = self.mds_params.shape.mesh
             # x_mesh.vertices = x.cpu().numpy()
             x_mesh.vertices = x
-            x_mesh.show()
+            #x_mesh.show()
+            #x_plot = np.array(x);
+            fig = plt.figure()
+            #ax = fig.gca(projection='3d')
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(x[:, 0], x[:, 1], x[:, 2])
+
+            #ax.plot_trisurf(x[:, 0], x[:, 1], x[:, 2], x_mesh.faces)
+
+            plt.tight_layout()
+            #plt.axis('equal')
+            plt.show()
+            plt.close()
+
         elif self.mds_params.signal_type == SignalType.POINT_CLOUD:
             pass
 

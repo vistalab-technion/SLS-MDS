@@ -1,6 +1,6 @@
 import numpy as np
-import torch
-from torch.autograd import Variable
+#import torch
+#from torch.autograd import Variable
 from scipy import sparse
 
 
@@ -178,6 +178,10 @@ class Calculations:
         mass = sparse.spdiags(tri2ver * fA / 3, 0, nv, nv)
 
         return mass.tocsc(), stiffness.tocsc()
+
+
+
+
 
 
 # '-- Pseudo-inverse \
