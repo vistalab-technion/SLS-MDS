@@ -10,7 +10,7 @@ from scipy.spatial.distance import pdist, squareform
 #from torch.autograd import Variable
 #import torch
 import matplotlib.pyplot as plt
-
+import trimesh as tri
 
 # def compute_s(mat, vec):
 #     print(mat.data[0])
@@ -37,14 +37,14 @@ def main():
 
     shape = Shape(filename="input/cat3.off")
 
-    tmp_shape = Shape("input/sphere_bump.off")
+    # tmp_shape = Shape("input/cat0.off")
 
     # shape.mesh.show()
     # TODO: replace with geodesic distance later
     # normal = np.random.normal(0, 1, size=(shape.size, 3))
     # print(normal)
 
-    #d_mat_input = squareform(pdist(tmp_shape.mesh.vertices, metric='euclidean'))  # TODO: replace with dedicated function
+    # d_mat_input = squareform(pdist(tmp_shape.mesh.vertices, metric='euclidean'))  # TODO: replace with dedicated function
     d_mat_input = sio.loadmat("input/D_cat3.mat")['D']
 
     mds_params = MdsParams.MdsParams(shape)
@@ -72,9 +72,10 @@ def main():
     mds = MDS.MDS(mds_params)
 
     new_x = mds.algorithm(d_mat, shape.weights, x0, phi)
-    # shape.mesh.vertices = new_x.cpu().numpy()
-    # shape.mesh.show()
-    # plt.plot(mds.stress_list)
-    # plt.show()
+    shape.mesh.vertices = new_x
+    tri_mesh = tri.Trimesh(shape.mesh.vertices, shape.mesh.faces)
+    tri_mesh.show()
+    plt.plot(mds.stress_list)
+    plt.show()
 if __name__ == '__main__':
     main()

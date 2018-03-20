@@ -1,18 +1,24 @@
 import numpy as np
 #import torch
-from Calculations import Calculations
-from scipy.spatial.distance import pdist, squareform
-import matplotlib.pyplot as plt
-from SignalType import SignalType
 #from torch.autograd import Variable
+from Calculations import Calculations
+from SignalType import SignalType
 from scipy import linalg
+from scipy.spatial.distance import pdist, squareform
+import trimesh as tri
+import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
 import pyglet
 import plotly.plotly as py
 from plotly.graph_objs import *
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.tri as mtri
+import py3d
+import sys
+from py3d import *
+
+from PIL import Image
+
 
 class MDS:
     # mds_params = MdsParams.MdsParams()
@@ -42,7 +48,10 @@ class MDS:
             p = p_array[i]  # p is the number of frequencies\ basis vectors
 
             # tmp = torch.zeros((p - len(alpha))).cuda()
-            # alpha = torch.cat([alpha, tmp])  # from_numpy(np.concatenate(alpha, tmp))  #TODO: concatenate alpha
+            # alpha = torch.cat([alpha, tmp])  # from_numpy()  #TODO: concatenate alpha
+            # temp = np.abs(p-len(alpha))
+            # tmp = np.zeros(temp)
+            # np.concatenate(alpha, tmp)
             x0_s = x0[samples[0:q], :]
             w_s = self.compute_sub(weights, samples)
             phi_s = phi[samples[0:q], 0:p]
@@ -196,19 +205,27 @@ class MDS:
             x_mesh = self.mds_params.shape.mesh
             # x_mesh.vertices = x.cpu().numpy()
             x_mesh.vertices = x
+            # mesh = py3d.P3D()
+            # mesh.faces = x_mesh.faces
+            # mesh.points = x_mesh.vertices
+
+            tri_mesh = tri.Trimesh(x, x_mesh.faces)
+            tri_mesh.show()
+            # mesh.write()
+
             #x_mesh.show()
             #x_plot = np.array(x);
-            fig = plt.figure()
-            #ax = fig.gca(projection='3d')
-            ax = fig.add_subplot(111, projection='3d')
-            ax.scatter(x[:, 0], x[:, 1], x[:, 2])
-
-            #ax.plot_trisurf(x[:, 0], x[:, 1], x[:, 2], x_mesh.faces)
-
-            plt.tight_layout()
-            #plt.axis('equal')
-            plt.show()
-            plt.close()
+            # fig = plt.figure()
+            # #ax = fig.gca(projection='3d')
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.scatter(x[:, 0], x[:, 1], x[:, 2])
+            #
+            # #ax.plot_trisurf(x[:, 0], x[:, 1], x[:, 2], x_mesh.faces)
+            #
+            # plt.tight_layout()
+            # #plt.axis('equal')
+            # plt.show()
+            # plt.close()
 
         elif self.mds_params.signal_type == SignalType.POINT_CLOUD:
             pass
