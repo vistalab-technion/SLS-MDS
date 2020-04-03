@@ -19,7 +19,7 @@ import trimesh as tri
 
 
 def main():
-    print("start main\n")
+    print("start main")
 
     # import mesh
     print('Hi')
