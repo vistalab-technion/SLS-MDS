@@ -54,7 +54,7 @@ def main():
     mds_params.set_shape(shape)
     mds_params.set_compute_full_stress_flag(True)
     mds_params.set_compute_full_embedding_flag(True)
-    mds_params.set_plot_flag(True)
+    mds_params.set_plot_flag(False)
     [samples, d_mat] = shape.sample_mesh(np.max(mds_params.q), d_mat_input)
 
     # samples_t = torch.from_numpy(np.array(samples))
@@ -73,8 +73,8 @@ def main():
 
     new_x = mds.algorithm(d_mat, shape.weights, x0, phi)
     shape.mesh.vertices = new_x
-    tri_mesh = tri.Trimesh(shape.mesh.vertices, shape.mesh.faces)
-    tri_mesh.show()
+    #tri_mesh = tri.Trimesh(shape.mesh.vertices, shape.mesh.faces)
+    #tri_mesh.show()
     plt.plot(mds.stress_list)
     plt.show()
 if __name__ == '__main__':
