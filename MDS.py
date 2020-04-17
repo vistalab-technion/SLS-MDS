@@ -7,17 +7,20 @@ from scipy import linalg
 from scipy.spatial.distance import pdist, squareform
 import trimesh as tri
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import pyglet
-import plotly.plotly as py
-from plotly.graph_objs import *
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.tri as mtri
-import py3d
-import sys
-from py3d import *
+#from mpl_toolkits.mplot3d import Axes3D
+#import pyglet
+#import plotly.plotly as py
 
-from PIL import Image
+from plotly.graph_objs import *
+
+#from mpl_toolkits.mplot3d import Axes3D
+#import matplotlib.tri as mtri
+#import py3d
+#import sys
+
+#from py3d import *
+
+#from PIL import Image
 
 
 class MDS:
