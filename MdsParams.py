@@ -1,28 +1,24 @@
 import numpy as np
-#import torch
 import trimesh
-#from torch.autograd import Variable
 from Shape import Shape
 from SignalType import SignalType
 
 
 class MdsParams:
-    #p = torch.FloatTensor
-    p = []
-    c = 2
-    #q = torch.FloatTensor
-    q = []
-    max_iter = 10000
-    a_tol = 0
-    r_tol = 1e-8
-    #samples_array = torch.LongTensor
-    samples_array = []
-    plot_flag = False
-    compute_full_stress_flag = False
-    compute_full_embedding_flag = compute_full_stress_flag
 
-    def __init__(self, shape):
+    def __init__(self, shape, _args):
         self.shape = shape
+        self.max_iter = _args.max_iter
+        self.a_tol = _args.a_tol
+        self.r_tol = _args.r_tol
+        self.c = _args.c
+        self.plot_flag = _args.plot_flage
+        self.compute_full_stress_flag = _args.compute_full_stress_flag
+        self.compute_full_embedding_flag = self.compute_full_stress_flag
+        self.p = _args.p
+        self.q = _args.q
+
+        self.samples_array = []
 
     def set_p_q(self, p, q=None):
         self.p = p
@@ -36,7 +32,7 @@ class MdsParams:
         self.a_tol = a_tol
         self.r_tol = r_tol
 
-    def samples(self, samples_array):
+    def set_samples(self, samples_array):
         self.samples_array = samples_array
 
     def set_shape(self, shape):
