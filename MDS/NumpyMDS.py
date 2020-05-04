@@ -1,16 +1,26 @@
+import logging
+
 import numpy as np
-from SignalType import SignalType
 from scipy import linalg
 from scipy.spatial.distance import pdist, squareform
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+
+from MDS.MDS import MDS
+from SignalType import SignalType
 
 
-class MDS:
+class NumpyMDS(MDS):
 
     def __init__(self, params):
-        self.mds_params = params
-        self.stress_list = []
+        MDS.__init__(self, params)
+        logging.basicConfig(filename='NumpyMDS.log', level=logging.INFO)
+
+        self.logger = logging.getLogger('NumpyMDS')
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+        self.logger.addHandler(ch)
+        self.logger.info("Numpy Logger")
 
     # _s stands for sampled, _p stands for projected on subspace
     def algorithm(self, distances, weights, x0, phi):
@@ -36,15 +46,17 @@ class MDS:
             v_s_p = np.matmul(np.matmul(np.transpose(phi_s), v_s), phi_s)
             v_s_p_i = linalg.pinv2(v_s_p)
             z = np.matmul(v_s_p_i, np.transpose(phi_s))
-
             v_s_x0_s = np.matmul(v_s, x0_s)
             x_s = x0_s
+
+            self.logger.info("index = {}:\nx0_s = {}\nw_s = {}\nphi_s = {}\nd_s = {}\n"
+                             "v_s = {}\nv_s_p = {}\nv_s_P_i = {}\nz = {}\nv_s_x0_s = {}\n"
+                             .format(i, x0_s, w_s, phi_s, d_s, v_s, v_s_p, v_s_p_i, z, v_s_x0_s))
 
             dx_s_mat = squareform(pdist(x_s, 'euclidean'))
             old_stress = self.compute_stress(d_s, dx_s_mat, w_s)
             iter_count = 1
             self.stress_list.append(old_stress)
-
             while not converged:
 
                 if self.mds_params.plot_flag:
@@ -80,41 +92,10 @@ class MDS:
         return mat_v
 
     @staticmethod
-    def compute_mat_b(d_mat, dx_mat, w_mat):
-        try:
-            tmp = -np.multiply(w_mat, d_mat)
-            b_mat = np.zeros(d_mat.shape)
-            b_mat[dx_mat != 0] = np.divide(tmp[dx_mat != 0], dx_mat[dx_mat != 0])
-
-        except ZeroDivisionError:
-            print("divided by zero")
-
-        diag_mat_b = -np.diag(np.sum(b_mat, 1))
-        b_mat += diag_mat_b
-        return b_mat
-
-    @staticmethod
     def compute_stress(d_mat, dx_mat, w_mat):
         print("start: compute_stress")
         tmp0 = np.subtract(np.triu(dx_mat), np.triu(d_mat))
         tmp = np.power(tmp0, 2)
         return np.sum(np.multiply(np.triu(w_mat), tmp))
 
-    def plot_embedding(self, new_x):
-        if self.mds_params.shape.signal_type == SignalType.MESH:
-            x = new_x[:, 0]
-            y = new_x[:, 1]
-            z = new_x[:, 2]
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            ax.scatter(x, y, z)
-            fig.show()
-
-        elif self.mds_params.signal_type == SignalType.POINT_CLOUD:
-            pass
-
-    @staticmethod
-    def compute_sub(mat, vec):
-        tmp_mat = mat[vec, :]
-        return tmp_mat[:, vec]
 

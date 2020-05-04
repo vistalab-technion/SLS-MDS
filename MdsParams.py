@@ -1,9 +1,3 @@
-import numpy as np
-import trimesh
-from Shape import Shape
-from SignalType import SignalType
-
-
 class MdsParams:
 
     def __init__(self, shape, _args):
@@ -23,7 +17,8 @@ class MdsParams:
     def set_p_q(self, p, q=None):
         self.p = p
         if q is None:
-            self.q = np.multiply(self.c, p)
+            # self.q = np.multiply(self.c, p)
+            self.q = self.c * p
         else:
             self.q = q
 
