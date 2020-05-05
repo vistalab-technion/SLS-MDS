@@ -68,15 +68,26 @@ class Shape:
 
         return mass.tocsc(), stiffness.tocsc()
 
-    def sample_mesh(self, k, d_mat=None):
+    def sample_mesh_fps(self, k, d_mat=None):
+        """
+        The function samples points from the mesh according to farthest point sampling
+         strategy
+
+        :param k: number of sample points.
+        :param d_mat: geodesic distance mat between all points on the mesh.
+        :return: set_c: set of sampled points
+                 d_mat:  geodesic distance matrix between points in set_c
+        """
+
         print("sample_mesh\n")
 
         if k == len(self.mesh.vertices):
             set_c = range(0, len(self.mesh.vertices))
             # TODO: compute geodesic distances
             if d_mat is None:
-                print('You need to provide distance matrix')
-
+                raise NotImplementedError('Compute geodesic in not implemented yet')
+                # todo: compute dist func
+                d = self.compute_geodesics()
         else:
             compute_d_mat_flag = False
             if d_mat is None:
@@ -84,8 +95,8 @@ class Shape:
 
             x_idx = random.randint(0, self.size)  # choose index of vertex from 0 to sizeof(vertices)
             set_c = [x_idx]
-            distances_from_c = np.empty(self.size, dtype=np.float32)
-            distances_from_c.fill(np.inf)
+            distances_from_set_c = np.empty(self.size, dtype=np.float32)
+            distances_from_set_c.fill(np.inf)
             # r = 200
             i = 0
             if compute_d_mat_flag:
@@ -93,16 +104,18 @@ class Shape:
 
             while i < k - 1:
                 if compute_d_mat_flag:
-                    d = self.compute_dist(x_idx, self.mesh)  # todo: compute dist func
-                    d_mat[:, x_idx] = d  # saving distances ,if distance map is available, no need to compute distances from points to mesh
+                    raise NotImplementedError('Compute geodesic in not implemented yet')
+                    # todo: compute dist func
+                    d = self.compute_geodesics(x_idx)
+                    d_mat[:, x_idx] = d  # saving distances ,if distance map is
+                    # available, no need to compute distances from points to mesh
                 else:
-                    d = d_mat[:, x_idx]
+                    d = d_mat[:, x_idx] # distance of all points on the mesh from x
 
-                distances_from_c = np.minimum(distances_from_c, d)
-                r = max(distances_from_c)
-                x_idx = np.where(distances_from_c == r)[0][0]
+                distances_from_set_c = np.minimum(distances_from_set_c, d)
+                r = max(distances_from_set_c)
+                x_idx = np.where(distances_from_set_c == r)[0][0]
                 set_c.append(x_idx)
-
                 i += 1
 
         return [set_c, d_mat]

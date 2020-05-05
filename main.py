@@ -12,7 +12,7 @@ import scipy.io as sio
 import argparse
 import matplotlib.pyplot as plt
 import trimesh
-import gdist
+# import gdist
 import sys
 
 from Shape.TorchShape import TorchShape
@@ -24,7 +24,8 @@ def main(_args, Type):
         shape = TorchShape(filename=_args.filename)
     elif Type == 'Numpy':
         shape = NumpyShape(filename=_args.filename)
-    elif Type == 'Both':  # only works with the same shape for both - currently uses meanly for testing
+    elif Type == 'Both':  # only works with the same shape for both - currently used
+        # mainly for testing
         shape = NumpyShape(filename=_args.filename)
         shape_t = TorchShape(filename=_args.filename)
     else:
@@ -33,6 +34,8 @@ def main(_args, Type):
 
     # shape.mesh.show()
 
+    # TODO: need to use standalone geodesic fucntion:
+    #  d_mat_input = shape.compute_geodesics()
     d_mat_input = sio.loadmat(_args.d_mat_input)['D']
     # n_faces = shape.mesh.faces.astype(int)
     # g_mat = gdist.compute_gdist(shape.mesh.vertices, n_faces)
@@ -41,34 +44,37 @@ def main(_args, Type):
     mds_params.set_p_q([_args.p], [_args.q])
     mds_params.set_shape(shape)
 
-    [samples, d_mat] = shape.sample_mesh(np.max(mds_params.q), d_mat_input)
-
+    [samples, d_mat] = shape.sample_mesh_fps(np.max(mds_params.q), d_mat_input)
     mds_params.set_samples(samples)
 
     # create subspace
-    shape.compute_subspace(max(mds_params.p))  # TODO: remove comment
+    shape.compute_subspace(max(mds_params.p))
     if Type == 'Both':
         shape_t.compute_subspace(max(mds_params.p))
 
     x0 = shape.mesh.vertices
 
     if Type == 'PyTorch':
+        var_type = torch.double
         mds = TorchMDS(mds_params)
-        phi = torch.real(shape.evecs)
-        d_mat = torch.from_numpy(d_mat)
+        phi = torch.real(shape.evecs).type(var_type)
+        d_mat = torch.from_numpy(d_mat).type(var_type)
+        x0 = torch.from_numpy(x0).type(var_type)
     elif Type == 'Numpy':
         mds = NumpyMDS(mds_params)
         phi = np.real(shape.evecs)
     elif Type == 'Both':
         # torch variables
+        var_type = torch.double
         mds_t = TorchMDS(mds_params)
-        phi_t = torch.real(shape_t.evecs)
-        d_mat_t = torch.from_numpy(d_mat)
+        phi_t = torch.real(shape_t.evecs).type(var_type)
+        d_mat_t = torch.from_numpy(d_mat).type(var_type)
+        x0_t = torch.from_numpy(x0).type(var_type)
         # numpy variables
         mds = NumpyMDS(mds_params)
         phi = np.real(shape.evecs)
         # calc torch version
-        new_x_t = mds_t.algorithm(d_mat_t, shape_t.weights, x0, phi_t)
+        new_x_t = mds_t.algorithm(d_mat_t, shape_t.weights, x0_t, phi_t)
         shape_t.mesh.vertices = new_x_t
         tri_mesh_t = trimesh.Trimesh(shape_t.mesh.vertices, shape_t.mesh.faces)
         tri_mesh_t.show()
@@ -82,6 +88,7 @@ def main(_args, Type):
     fig2 = plt.figure()
     plt.plot(mds.stress_list)
     fig2.show()
+    # TODO: create new Shape with new_x, call it canonical_form
     shape.mesh.vertices = new_x
     tri_mesh = trimesh.Trimesh(shape.mesh.vertices, shape.mesh.faces)
     tri_mesh.show()
