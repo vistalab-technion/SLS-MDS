@@ -9,10 +9,12 @@ class MdsParams:
         self.plot_flag = _args.plot_flage
         self.compute_full_stress_flag = _args.compute_full_stress_flag
         self.compute_full_embedding_flag = self.compute_full_stress_flag
-        self.p = _args.p
-        self.q = _args.q
-
+        self.p = []
+        self.q = []
+        self.display_every = _args.display_every
+        self.max_size_for_pinv = _args.max_size_for_pinv
         self.samples_array = []
+        self.weights = []
 
     def set_p_q(self, p=None, q=None):
         self.p = p
@@ -23,6 +25,9 @@ class MdsParams:
             self.q = self.c * self.p
         else:
             self.q = q
+
+    def set_weights(self, weights):
+        self.weights = weights
 
     def set_optim_param(self, max_iter, a_tol, r_tol):
         self.max_iter = max_iter

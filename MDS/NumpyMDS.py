@@ -3,6 +3,7 @@ import logging
 import numpy as np
 from scipy import linalg
 from scipy.spatial.distance import pdist, squareform
+import warnings
 
 from MDS.MDS import MDS
 from SignalType import SignalType
@@ -23,7 +24,7 @@ class NumpyMDS(MDS):
         self.logger.info("Numpy Logger")
 
     # _s stands for sampled, _p stands for projected on subspace
-    def algorithm(self, distances, weights, x0, phi):
+    def algorithm(self, distances, x0, phi):
         print("start algorithm")
         # extract parameters
         q_array = self.mds_params.q
@@ -37,14 +38,26 @@ class NumpyMDS(MDS):
         for i in range(len(p_array)):
             q = q_array[i]  # q is the number of samples
             p = p_array[i]  # p is the number of frequencies\ basis vectors
+            assert (q > p) or ((p == x0.shape[0]) and (q == x0.shape[0])),\
+                "q should be larger than p or full size"
+            if q < 2*p and ((p < x0.shape[0]) and (q < x0.shape[0])):
+                warnings.warn('"It is recommended that q will be least 2p"')
 
             x0_s = x0[samples[0:q], :]
-            w_s = self.compute_sub(weights, samples)
+            w_s = self.compute_sub(self.mds_params.weights, samples)
             phi_s = phi[samples[0:q], 0:p]
             d_s = self.compute_sub(distances, samples)
             v_s = self.compute_v(w_s)
             v_s_p = np.matmul(np.matmul(np.transpose(phi_s), v_s), phi_s)
-            v_s_p_i = linalg.pinv2(v_s_p)
+            if (v_s_p.shape[0] < x0.shape[0]) or \
+                    (p == self.mds_params.shape.size):
+                v_s_p_i = linalg.pinv2(v_s_p)
+            else:
+                print('"size too large for using pinv."')
+                raise SystemExit
+                # TODO: change such that it will be possible to work without pinv, i.e.,
+                #  solve update equation via linear system solution
+
             z = np.matmul(v_s_p_i, np.transpose(phi_s))
             v_s_x0_s = np.matmul(v_s, x0_s)
             x_s = x0_s
@@ -59,9 +72,11 @@ class NumpyMDS(MDS):
             self.stress_list.append(old_stress)
             while not converged:
                 # --------------------------  plotting --------------------------------
-                if self.mds_params.plot_flag and (iter_count % 10) == 0:
+                if self.mds_params.plot_flag and \
+                        (iter_count % self.mds_params.display_every) == 0:
                     if self.mds_params.plot_flag:
                         self.plot_embedding(x0 + np.matmul(phi[:, 0:p], alpha))
+                        #TODO: change plot_embedding to work from shape
                     print(f'iter : {iter_count}, stress : {old_stress}')
                 # --------------------------------------------------------------------
 
@@ -74,7 +89,10 @@ class NumpyMDS(MDS):
 
                 # check convergence
                 new_stress = self.compute_stress(d_s, dx_s_mat, w_s)
-                converged = self.mds_params.max_iter <= iter_count
+                converged = (new_stress <= self.mds_params.a_tol) or \
+                            (1 - (new_stress / old_stress) <= self.mds_params.r_tol) or \
+                            (self.mds_params.max_iter <= iter_count)
+                # converged = self.mds_params.max_iter <= iter_count
                 old_stress = new_stress
                 self.stress_list.append(old_stress)
                 iter_count += 1
@@ -83,7 +101,7 @@ class NumpyMDS(MDS):
                     x = x0 + np.matmul(phi[:, 0:p], alpha)
                     if self.mds_params.compute_full_stress_flag:
                         intermediate_results_list.append(x)
-
+        print(f'final stress : {old_stress}')
         return x0 + np.matmul(phi[:, 0:p], alpha)
 
     @staticmethod

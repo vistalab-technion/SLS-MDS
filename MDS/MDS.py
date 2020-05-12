@@ -26,9 +26,16 @@ class MDS:
             ax = fig.add_subplot(111, projection='3d')
             ax.scatter(x, y, z)
             fig.show()
+            # TODO: we should change to mesh plotting
 
         elif self.mds_params.signal_type == SignalType.POINT_CLOUD:
-            pass
+            x = new_x[:, 0]
+            y = new_x[:, 1]
+            z = new_x[:, 2]
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.scatter(x, y, z)
+            fig.show()
 
     @staticmethod
     def compute_mat_b(d_mat, dx_mat, w_mat):
@@ -44,6 +51,15 @@ class MDS:
         b_mat += diag_mat_b
         return b_mat
 
+    @staticmethod
+    def compute_v(w_mat):
+        mat_v = -w_mat + np.diag(np.diag(w_mat))
+        mat_v -= np.diag(np.sum(mat_v, 1))
 
+        return mat_v
 
-
+    @staticmethod
+    def compute_stress(d_mat, dx_mat, w_mat):
+        tmp0 = np.subtract(np.triu(dx_mat), np.triu(d_mat))
+        tmp = np.power(tmp0, 2)
+        return np.sum(np.multiply(np.triu(w_mat), tmp))

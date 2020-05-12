@@ -11,7 +11,6 @@ class NumpyShape(Shape):
     def __init__(self, filename=None):
         Shape.__init__(self, filename)
         if filename is not None:
-            self.weights = np.ones((self.size, self.size))
             self.mass_mat, self.stiffness_mat = self.compute_laplacian()
             self.eigs = np.array([])
             self.evecs = np.array([])
