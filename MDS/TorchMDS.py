@@ -89,16 +89,22 @@ class TorchMDS(MDS):
             # TODO: squareform is actually redundant, we can use an upper triangular mat
             d_euc_s_mat = torch.from_numpy(d_euc_s_mat_np).type(torch.double)
             old_stress = self.compute_stress(d_s, d_euc_s_mat, w_s)
-            iter_count = 1
+            iter_count = 0
             self.stress_list.append(old_stress)
             while not converged_flag:
-                if self.mds_params.plot_flag:
+                # --------------------------  plotting --------------------------------
+                if self.mds_params.plot_flag and (iter_count % 10) == 0:
                     if self.device == 'cuda':
                         self.plot_embedding(x0.cpu().numpy() + torch.matmul(
                             phi[:, 0:p], alpha).cpu().numpy())
+                        print(f'iter : {iter_count}, stress : {old_stress}')
+
                     else:
                         self.plot_embedding(x0 + torch.from_numpy(np.matmul(
                             phi[:, 0:p].numpy(), alpha.numpy())))
+                        print(f'iter : {iter_count}, stress : {old_stress}')
+                # --------------------------------------------------------------------
+
                 b_s = self.compute_mat_b(d_s.numpy(), d_euc_s_mat.numpy(), w_s.numpy())
                 # this is B from equation 5 in [1] computed on the sample set
                 # TODO: check if possible to remove numpy
@@ -169,7 +175,6 @@ class TorchMDS(MDS):
         :param w_mat: weights matrix
         :return: stress
         """
-        print("start: compute_stress")
         tmp0 = torch.sub(torch.triu(d_euc_mat), torch.triu(d_mat))
         tmp = torch.pow(tmp0, 2)
         return torch.sum(torch.mul(torch.triu(w_mat), tmp))

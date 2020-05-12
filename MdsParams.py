@@ -14,11 +14,13 @@ class MdsParams:
 
         self.samples_array = []
 
-    def set_p_q(self, p, q=None):
+    def set_p_q(self, p=None, q=None):
         self.p = p
+        if p is None:
+            self.p = [self.shape.size]
         if q is None:
             # self.q = np.multiply(self.c, p)
-            self.q = self.c * p
+            self.q = self.c * self.p
         else:
             self.q = q
 

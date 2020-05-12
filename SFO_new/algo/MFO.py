@@ -52,7 +52,7 @@ class MFO:
                 mds_params.set_compute_full_stress_flag(False)
                 mds_params.set_compute_full_stress_flag(False)
                 mds_params.set_plot_flag(False)
-                [samples, d_mat] = shape.sample_mesh(np.max(mds_params.q), d_mat_input)
+                [samples, d_mat] = shape.sample_mesh_fps(np.max(mds_params.q), d_mat_input)
                 mds_params.samples(samples)
                 # create subspace
                 shape.compute_subspace(max(mds_params.p))

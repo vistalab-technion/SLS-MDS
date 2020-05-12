@@ -41,14 +41,16 @@ def main(_args, Type):
     # g_mat = gdist.compute_gdist(shape.mesh.vertices, n_faces)
     mds_params = MdsParams.MdsParams(shape, _args)
 
-    mds_params.set_p_q([_args.p], [_args.q])
     mds_params.set_shape(shape)
+    mds_params.set_p_q(_args.p, _args.q)
 
     [samples, d_mat] = shape.sample_mesh_fps(np.max(mds_params.q), d_mat_input)
     mds_params.set_samples(samples)
 
     # create subspace
     shape.compute_subspace(max(mds_params.p))
+
+
     if Type == 'Both':
         shape_t.compute_subspace(max(mds_params.p))
 
@@ -84,22 +86,21 @@ def main(_args, Type):
         raise SystemExit()
 
     new_x = mds.algorithm(d_mat, shape.weights, x0, phi)
-    time.sleep(40)
     fig2 = plt.figure()
     plt.plot(mds.stress_list)
     fig2.show()
     # TODO: create new Shape with new_x, call it canonical_form
     shape.mesh.vertices = new_x
     tri_mesh = trimesh.Trimesh(shape.mesh.vertices, shape.mesh.faces)
-    tri_mesh.show()
+    # tri_mesh.show()
 
     print("end main")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MDS args')
-    parser.add_argument('--p', default=300, type=int, help='p is the number of frequencies or basis vectors')
-    parser.add_argument('--q', default=600, type=int, help='q is the number of samples')
+    parser.add_argument('--p', default=[100], help='p is the number of frequencies or basis vectors')
+    parser.add_argument('--q', default=[100], help='q is the number of samples')
     parser.add_argument('--max_iter', default=50)
     parser.add_argument('--a_tol', default=0)
     parser.add_argument('--r_tol', default=0)
@@ -111,5 +112,5 @@ if __name__ == '__main__':
 
     _args = parser.parse_args()
     # main(_args, 'Both')
-    # main(_args, 'Numpy')
-    main(_args, 'PyTorch')
+    main(_args, 'Numpy')
+    # main(_args, 'PyTorch')

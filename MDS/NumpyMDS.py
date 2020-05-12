@@ -58,10 +58,12 @@ class NumpyMDS(MDS):
             iter_count = 1
             self.stress_list.append(old_stress)
             while not converged:
-
-                if self.mds_params.plot_flag:
-                    self.plot_embedding(x0 + np.matmul(phi[:, 0:p], alpha))
-                    # TODO: plot full embedding
+                # --------------------------  plotting --------------------------------
+                if self.mds_params.plot_flag and (iter_count % 10) == 0:
+                    if self.mds_params.plot_flag:
+                        self.plot_embedding(x0 + np.matmul(phi[:, 0:p], alpha))
+                    print(f'iter : {iter_count}, stress : {old_stress}')
+                # --------------------------------------------------------------------
 
                 b_s = self.compute_mat_b(d_s, dx_s_mat, w_s)
                 y = np.subtract(np.matmul(b_s, x_s), v_s_x0_s)
@@ -93,7 +95,6 @@ class NumpyMDS(MDS):
 
     @staticmethod
     def compute_stress(d_mat, dx_mat, w_mat):
-        print("start: compute_stress")
         tmp0 = np.subtract(np.triu(dx_mat), np.triu(d_mat))
         tmp = np.power(tmp0, 2)
         return np.sum(np.multiply(np.triu(w_mat), tmp))
