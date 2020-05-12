@@ -16,6 +16,7 @@ trimesh = "*"
 # plotly = "*"
 networkx = "*"
 pyglet = "*"
+gdist = "*"
 
 [requires]
 python_version = "3.7"

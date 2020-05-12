@@ -1,81 +1,124 @@
-import random
+import time
 
-import MdsParams
-from Shape import Shape
-import MDS
+import torch
+
+import MDS.MdsConfig as MdsConfig
+from MDS.TorchMDS import TorchMDS
+from Shape.NumpyShape import NumpyShape
+from Shape.Shape import Shape
+from MDS.NumpyMDS import NumpyMDS
 import numpy as np
 import scipy.io as sio
-
-from scipy.spatial.distance import pdist, squareform
-#from torch.autograd import Variable
-#import torch
+import argparse
 import matplotlib.pyplot as plt
-import trimesh as tri
+import trimesh
+# import gdist
+import sys
 
-# def compute_s(mat, vec):
-#     print(mat.data[0])
-#     print(vec)
-#     return mat[vec, :]
+from Shape.TorchShape import TorchShape
 
 
-def main():
-    print("start main\n")
-
-    # import mesh
-    print('Hi')
-
-    # tmp = np.array([[2, 0], [1, 2], [0, 1]])
-    # tmp2 = np.array([[2, 3], [0, 1], [1, 1], [6, 7]])
-    # # print(tmp2[tmp, :])
-    # new_temp = tmp2[tmp[:, 0]]
-    # print(tmp2, "\n new tmp = ", new_temp)
-
-    # tmp = torch.FloatTensor([[2, 0, 4], [1, 2, 8], [0, 1, 0]])
-    # tmp2 = torch.FloatTensor([[2, 3], [0, 1], [1, 1], [6, 7]])
-    #
-    # print(tmp[list(range(3)), list(range(3))])
-
-    shape = Shape(filename="input/cat3.off")
-
-    # tmp_shape = Shape("input/cat0.off")
+def main(_args, Type):
+    print("start main")
+    if Type == 'PyTorch':
+        shape = TorchShape(filename=_args.filename)
+    elif Type == 'Numpy':
+        shape = NumpyShape(filename=_args.filename)
+    elif Type == 'Both':  # only works with the same shape for both - currently used
+        # mainly for testing
+        shape = NumpyShape(filename=_args.filename)
+        shape_t = TorchShape(filename=_args.filename)
+    else:
+        print("Type should be PyTorch, Numpy or Both")
+        raise SystemExit()
 
     # shape.mesh.show()
-    # TODO: replace with geodesic distance later
-    # normal = np.random.normal(0, 1, size=(shape.size, 3))
-    # print(normal)
 
-    # d_mat_input = squareform(pdist(tmp_shape.mesh.vertices, metric='euclidean'))  # TODO: replace with dedicated function
-    d_mat_input = sio.loadmat("input/D_cat3.mat")['D']
+    # TODO: need to use standalone geodesic fucntion:
+    #  d_mat_input = shape.compute_geodesics()
+    d_mat_input = sio.loadmat(_args.d_mat_input)['D']
+    # n_faces = shape.mesh.faces.astype(int)
+    # g_mat = gdist.compute_gdist(shape.mesh.vertices, n_faces)
+    mds_params = MdsConfig.MdsParams(shape, _args)
 
-    mds_params = MdsParams.MdsParams(shape)
-
-    mds_params.set_p_q([300], [600]) #[len(shape.mesh.vertices)])
-    mds_params.set_optim_param(50, 0, 0)
     mds_params.set_shape(shape)
-    mds_params.set_compute_full_stress_flag(True)
-    mds_params.set_compute_full_embedding_flag(True)
-    mds_params.set_plot_flag(False)
-    [samples, d_mat] = shape.sample_mesh(np.max(mds_params.q), d_mat_input)
+    mds_params.set_p_q(_args.p, _args.q)
+    mds_params.set_weights(np.ones(d_mat_input.shape))
 
-    # samples_t = torch.from_numpy(np.array(samples))
-    mds_params.samples(samples)
+    [samples, d_mat] = shape.sample_mesh_fps(np.max(mds_params.q), d_mat_input)
+    mds_params.set_samples(samples)
+
     # create subspace
+    # TODO: this only works for mesh. If we have graph or point cloud it should be
+    #  different
+    shape.compute_subspace(max(mds_params.p))
 
-    shape.compute_subspace(max(mds_params. p))  # TODO: remove comment
-    #shape.evecs = np.eye(shape.size)
 
-    phi = np.real(shape.evecs)
-    # phi_t = Variable(torch.from_numpy(phi).type(torch.FloatTensor)).cuda()
-    # x0 = Variable(torch.from_numpy(shape.mesh.vertices).type(torch.FloatTensor)).cuda()
+    if Type == 'Both':
+        shape_t.compute_subspace(max(mds_params.p))
+
     x0 = shape.mesh.vertices
-    # d_mat_t = Variable(torch.FloatTensor(d_mat)).cuda()
-    mds = MDS.MDS(mds_params)
 
-    new_x = mds.algorithm(d_mat, shape.weights, x0, phi)
-    shape.mesh.vertices = new_x
-    #tri_mesh = tri.Trimesh(shape.mesh.vertices, shape.mesh.faces)
-    #tri_mesh.show()
+    if Type == 'PyTorch':
+        var_type = torch.double
+        mds = TorchMDS(mds_params)
+        phi = torch.real(shape.evecs).type(var_type)
+        d_mat = torch.from_numpy(d_mat).type(var_type)
+        x0 = torch.from_numpy(x0).type(var_type)
+    elif Type == 'Numpy':
+        mds = NumpyMDS(mds_params)
+        phi = np.real(shape.evecs)
+    elif Type == 'Both':
+        # torch variables
+        var_type = torch.double
+        mds_t = TorchMDS(mds_params)
+        phi_t = torch.real(shape_t.evecs).type(var_type)
+        d_mat_t = torch.from_numpy(d_mat).type(var_type)
+        x0_t = torch.from_numpy(x0).type(var_type)
+        # numpy variables
+        mds = NumpyMDS(mds_params)
+        phi = np.real(shape.evecs)
+        # calc torch version
+        new_x_t = mds_t.algorithm(d_mat_t, x0_t, phi_t)
+        shape_t.mesh.vertices = new_x_t
+        tri_mesh_t = trimesh.Trimesh(shape_t.mesh.vertices, shape_t.mesh.faces)
+        tri_mesh_t.show()
+
+    else:
+        print("Type should be PyTorch, Numpy or Both")
+        raise SystemExit()
+
+    # TODO: change inputs from TrackedArray to ndarray and check speed
+    new_x = mds.algorithm(d_mat, x0, phi)
+    fig2 = plt.figure()
     plt.plot(mds.stress_list)
-    plt.show()
+    fig2.show()
+    # TODO: create new Shape with new_x, call it canonical_form
+    shape.mesh.vertices = new_x
+    tri_mesh = trimesh.Trimesh(shape.mesh.vertices, shape.mesh.faces)
+    # tri_mesh.show()
+
+    print("end main")
+
+
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='MDS args')
+    parser.add_argument('--p', default=[100], help='p is the number of frequencies or '
+                                                   'basis vectors')
+    parser.add_argument('--q', default=[300], help='q is the number of samples')
+    parser.add_argument('--max_iter', default=500000000)
+    parser.add_argument('--a_tol', default=0.001, help="absolute tolerance")
+    parser.add_argument('--r_tol', default=0.000001, help="relative tolerance")
+    parser.add_argument('--filename', default='input/cat3.off', help="file name")
+    parser.add_argument('--d_mat_input', default='input/D_cat3.mat',
+                        help='geodesic distance mat')
+    parser.add_argument('--c', default=2, help="c = q/p, i.e. Nyquist ratio")
+    parser.add_argument('--plot_flage', default=True)
+    parser.add_argument('--compute_full_stress_flag', default=True)
+    parser.add_argument('--display_every', default=10, help='display every n iterations')
+    parser.add_argument('--max_size_for_pinv', default=1000, help='display every n iterations')
+
+    _args = parser.parse_args()
+    # main(_args, 'Both')
+    main(_args, 'Numpy')
+    # main(_args, 'PyTorch')
