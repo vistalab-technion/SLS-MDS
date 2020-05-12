@@ -57,7 +57,7 @@ def main():
     mds_params.set_compute_full_stress_flag(True)
     mds_params.set_compute_full_embedding_flag(True)
     mds_params.set_plot_flag(True)
-    [samples, d_mat] = shape.sample_mesh(np.max(mds_params.q), d_mat_input)
+    [samples, d_mat] = shape.sample_mesh_fps(np.max(mds_params.q), d_mat_input)
 
     # samples_t = torch.from_numpy(np.array(samples))
     mds_params.samples(samples)
