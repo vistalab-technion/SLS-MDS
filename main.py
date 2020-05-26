@@ -103,9 +103,9 @@ def main(_args, Type):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MDS args')
-    parser.add_argument('--p', default=[100], help='p is the number of frequencies or '
+    parser.add_argument('--p', default=[100, 200], help='p is the number of frequencies or '
                                                    'basis vectors')
-    parser.add_argument('--q', default=[300], help='q is the number of samples')
+    parser.add_argument('--q', default=[300, 600], help='q is the number of samples')
     parser.add_argument('--max_iter', default=500000000)
     parser.add_argument('--a_tol', default=0.001, help="absolute tolerance")
     parser.add_argument('--r_tol', default=0.000001, help="relative tolerance")
