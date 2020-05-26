@@ -4,8 +4,8 @@ import numpy as np
 from Calculations import Calculations
 import random
 from scipy import sparse
-
 from SignalType import SignalType
+random.seed(10)
 
 
 class Shape:
