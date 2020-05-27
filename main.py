@@ -36,6 +36,7 @@ def main(_args, Type):
         raise SystemExit()
 
     # shape.mesh.show()
+    shape.plot_embedding(shape.mesh.vertices)
 
     # TODO: need to use standalone geodesic fucntion:
     #  d_mat_input = shape.compute_geodesics()
@@ -100,7 +101,7 @@ def main(_args, Type):
     shape.mesh.vertices = new_x
     tri_mesh = trimesh.Trimesh(shape.mesh.vertices, shape.mesh.faces)
     # tri_mesh.show()
-    mds.plot_embedding(shape.mesh.vertices)
+    shape.plot_embedding(shape.mesh.vertices)
     print("end main")
 
 
@@ -112,8 +113,8 @@ if __name__ == '__main__':
     parser.add_argument('--max_iter', default=500)
     parser.add_argument('--a_tol', default=0.001, help="absolute tolerance")
     parser.add_argument('--r_tol', default=0.00001, help="relative tolerance")
-    parser.add_argument('--filename', default='input/cat3.off', help="file name")
-    parser.add_argument('--d_mat_input', default='input/D_cat3.mat',
+    parser.add_argument('--filename', default='input/dog0.off', help="file name")
+    parser.add_argument('--d_mat_input', default='input/D_dog0.mat',
                         help='geodesic distance mat')
     parser.add_argument('--c', default=2, help="c = q/p, i.e. Nyquist ratio")
     parser.add_argument('--plot_flag', default=True)
