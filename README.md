@@ -1,4 +1,5 @@
 Subspace least-squares multidimensional scaling
+
 https://arxiv.org/abs/1709.03484
 
 © Amit Boyarski, Adi Weinberger, 2020
