@@ -6,7 +6,7 @@ class MdsParams:
         self.a_tol = _args.a_tol
         self.r_tol = _args.r_tol
         self.c = _args.c
-        self.plot_flag = _args.plot_flage
+        self.plot_flag = _args.plot_flag
         self.compute_full_stress_flag = _args.compute_full_stress_flag
         self.compute_full_embedding_flag = self.compute_full_stress_flag
         self.p = []

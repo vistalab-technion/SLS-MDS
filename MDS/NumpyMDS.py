@@ -32,10 +32,11 @@ class NumpyMDS(MDS):
         samples = self.mds_params.samples_array
 
         alpha = np.zeros([p_array[0], self.mds_params.shape.dim])
-        converged = False
         intermediate_results_list = []
 
         for i in range(len(p_array)):
+            converged = False
+            print(i)
             q = q_array[i]  # q is the number of samples
             p = p_array[i]  # p is the number of frequencies\ basis vectors
             assert (q > p) or ((p == x0.shape[0]) and (q == x0.shape[0])),\
@@ -43,10 +44,11 @@ class NumpyMDS(MDS):
             if q < 2*p and ((p < x0.shape[0]) and (q < x0.shape[0])):
                 warnings.warn('"It is recommended that q will be least 2p"')
 
+            alpha = np.zeros([p, self.mds_params.shape.dim])
             x0_s = x0[samples[0:q], :]
-            w_s = self.compute_sub(self.mds_params.weights, samples)
+            w_s = self.compute_sub(self.mds_params.weights, samples[0:q])
             phi_s = phi[samples[0:q], 0:p]
-            d_s = self.compute_sub(distances, samples)
+            d_s = self.compute_sub(distances, samples[0:q])
             v_s = self.compute_v(w_s)
             v_s_p = np.matmul(np.matmul(np.transpose(phi_s), v_s), phi_s)
             if (v_s_p.shape[0] < x0.shape[0]) or \
@@ -62,14 +64,14 @@ class NumpyMDS(MDS):
             v_s_x0_s = np.matmul(v_s, x0_s)
             x_s = x0_s
 
-            self.logger.info("index = {}:\nx0_s = {}\nw_s = {}\nphi_s = {}\nd_s = {}\n"
-                             "v_s = {}\nv_s_p = {}\nv_s_P_i = {}\nz = {}\nv_s_x0_s = {}\n"
-                             .format(i, x0_s, w_s, phi_s, d_s, v_s, v_s_p, v_s_p_i, z, v_s_x0_s))
+            #self.logger.info("index = {}:\nx0_s = {}\nw_s = {}\nphi_s = {}\nd_s = {}\n"
+            #                 "v_s = {}\nv_s_p = {}\nv_s_P_i = {}\nz = {}\nv_s_x0_s = {}\n"
+            #                 .format(i, x0_s, w_s, phi_s, d_s, v_s, v_s_p, v_s_p_i, z, v_s_x0_s))
 
             dx_s_mat = squareform(pdist(x_s, 'euclidean'))
             old_stress = self.compute_stress(d_s, dx_s_mat, w_s)
             iter_count = 1
-            self.stress_list.append(old_stress)
+            self.stress_list.append((1/(q*q))*old_stress)
             while not converged:
                 # --------------------------  plotting --------------------------------
                 if self.mds_params.plot_flag and \
@@ -94,13 +96,19 @@ class NumpyMDS(MDS):
                             (self.mds_params.max_iter <= iter_count)
                 # converged = self.mds_params.max_iter <= iter_count
                 old_stress = new_stress
-                self.stress_list.append(old_stress)
+                self.stress_list.append((1/(q*q))*old_stress)
                 iter_count += 1
 
                 if self.mds_params.compute_full_embedding_flag:
                     x = x0 + np.matmul(phi[:, 0:p], alpha)
                     if self.mds_params.compute_full_stress_flag:
                         intermediate_results_list.append(x)
+
+            #if i<(len(p_array)-1):
+                # extra_zeros = np.zeros([p_array[i + 1]-p, self.mds_params.shape.dim])
+                # alpha = np.concatenate((alpha, extra_zeros), 0)
+            x0 = x0 + np.matmul(phi[:, 0:p], alpha)
+
         print(f'final stress : {old_stress}')
         return x0 + np.matmul(phi[:, 0:p], alpha)
 

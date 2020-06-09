@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 import trimesh
 # import gdist
 import sys
+import matplotlib as mpl
+from mpl_toolkits.mplot3d import Axes3D
+# mpl.use('macosx')
 
 from Shape.TorchShape import TorchShape
 
@@ -33,6 +36,7 @@ def main(_args, Type):
         raise SystemExit()
 
     # shape.mesh.show()
+    shape.plot_embedding(shape.mesh.vertices)
 
     # TODO: need to use standalone geodesic fucntion:
     #  d_mat_input = shape.compute_geodesics()
@@ -97,23 +101,23 @@ def main(_args, Type):
     shape.mesh.vertices = new_x
     tri_mesh = trimesh.Trimesh(shape.mesh.vertices, shape.mesh.faces)
     # tri_mesh.show()
-
+    shape.plot_embedding(shape.mesh.vertices)
     print("end main")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MDS args')
-    parser.add_argument('--p', default=[100], help='p is the number of frequencies or '
+    parser.add_argument('--p', default=[100, 200], help='p is the number of frequencies or '
                                                    'basis vectors')
-    parser.add_argument('--q', default=[300], help='q is the number of samples')
-    parser.add_argument('--max_iter', default=500000000)
+    parser.add_argument('--q', default=[200, 400], help='q is the number of samples')
+    parser.add_argument('--max_iter', default=500)
     parser.add_argument('--a_tol', default=0.001, help="absolute tolerance")
-    parser.add_argument('--r_tol', default=0.000001, help="relative tolerance")
-    parser.add_argument('--filename', default='input/cat3.off', help="file name")
-    parser.add_argument('--d_mat_input', default='input/D_cat3.mat',
+    parser.add_argument('--r_tol', default=0.00001, help="relative tolerance")
+    parser.add_argument('--filename', default='input/dog0.off', help="file name")
+    parser.add_argument('--d_mat_input', default='input/D_dog0.mat',
                         help='geodesic distance mat')
     parser.add_argument('--c', default=2, help="c = q/p, i.e. Nyquist ratio")
-    parser.add_argument('--plot_flage', default=True)
+    parser.add_argument('--plot_flag', default=True)
     parser.add_argument('--compute_full_stress_flag', default=True)
     parser.add_argument('--display_every', default=10, help='display every n iterations')
     parser.add_argument('--max_size_for_pinv', default=1000, help='display every n iterations')
