@@ -7,6 +7,7 @@ from MDS.TorchMDS import TorchMDS
 from Shape.NumpyShape import NumpyShape
 from Shape.Shape import Shape
 from MDS.NumpyMDS import NumpyMDS
+
 import numpy as np
 import scipy.io as sio
 import argparse
@@ -35,7 +36,7 @@ def main(_args, Type):
         print("Type should be PyTorch, Numpy or Both")
         raise SystemExit()
 
-    # shape.mesh.show()
+    shape.mesh.show()
     shape.plot_embedding(shape.mesh.vertices)
 
     # TODO: need to use standalone geodesic fucntion:
@@ -97,11 +98,10 @@ def main(_args, Type):
     fig2 = plt.figure()
     plt.plot(mds.stress_list)
     fig2.show()
-    # TODO: create new Shape with new_x, call it canonical_form
-    shape.mesh.vertices = new_x
-    tri_mesh = trimesh.Trimesh(shape.mesh.vertices, shape.mesh.faces)
-    # tri_mesh.show()
-    shape.plot_embedding(shape.mesh.vertices)
+
+    canonical_form = Shape(vertices=new_x, faces=shape.mesh.faces)
+    canonical_form.mesh.show()
+    shape.plot_embedding(canonical_form.mesh.vertices)
     print("end main")
 
 
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     parser.add_argument('--d_mat_input', default='input/D_dog0.mat',
                         help='geodesic distance mat')
     parser.add_argument('--c', default=2, help="c = q/p, i.e. Nyquist ratio")
-    parser.add_argument('--plot_flag', default=True)
+    parser.add_argument('--plot_flag', default=False)
     parser.add_argument('--compute_full_stress_flag', default=True)
     parser.add_argument('--display_every', default=10, help='display every n iterations')
     parser.add_argument('--max_size_for_pinv', default=1000, help='display every n iterations')

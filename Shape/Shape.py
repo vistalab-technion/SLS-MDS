@@ -1,23 +1,30 @@
 import scipy.sparse.linalg as sp
 import trimesh
 import numpy as np
-from Calculations import Calculations
 import random
+import matplotlib.pyplot as plt
 from scipy import sparse
+
 from SignalType import SignalType
 random.seed(10)
-import matplotlib.pyplot as plt
 
 
 class Shape:
 
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, vertices=None, faces=None):
         self.signal_type = SignalType.MESH
 
         if filename is not None:
             self.mesh = trimesh.load_mesh(filename, process=False)
-            self.size = len(self.mesh.vertices)
-            self.dim = len(self.mesh.vertices[0])
+
+        elif vertices is not None and faces is not None:
+            self.mesh = trimesh.Trimesh(vertices, faces)
+        else:
+            print("Shape should get 'filename' or 'vertices and faces'")
+            raise SystemError()
+
+        self.size = len(self.mesh.vertices)
+        self.dim = len(self.mesh.vertices[0])
 
     def set_signal_type(self, signal_type):
         self.signal_type = signal_type
