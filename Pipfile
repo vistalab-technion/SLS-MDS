@@ -16,7 +16,9 @@ trimesh = "*"
 # plotly = "*"
 networkx = "*"
 pyglet = "*"
-gdist = "*"
+# gdist = "*"
+wheel = "*"
+argparse = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"
