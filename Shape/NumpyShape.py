@@ -15,6 +15,7 @@ class NumpyShape(Shape):
             self.eigs = np.array([])
             self.evecs = np.array([])
             self.adjacency_mat = self.compute_adjacency_mat()
+            self.weights = np.ones((self.size, self.size))
 
     def compute_subspace(self, k):
         print('start compute subspace')
