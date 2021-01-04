@@ -15,6 +15,7 @@ class MdsParams:
         self.max_size_for_pinv = _args.max_size_for_pinv
         self.samples_array = []
         self.weights = []
+        self.weights_t = []
 
     def set_p_q(self, p=None, q=None):
         self.p = p
@@ -26,8 +27,9 @@ class MdsParams:
         else:
             self.q = q
 
-    def set_weights(self, weights):
+    def set_weights(self, weights, weights_t=None):
         self.weights = weights
+        self.weights_t = weights_t
 
     def set_optim_param(self, max_iter, a_tol, r_tol):
         self.max_iter = max_iter
@@ -35,7 +37,7 @@ class MdsParams:
         self.r_tol = r_tol
 
     def set_samples(self, samples_array):
-        self.samples_array = samples_array
+        self.samples_array = samples_array.copy()
 
     def set_shape(self, shape):
         self.shape = shape
