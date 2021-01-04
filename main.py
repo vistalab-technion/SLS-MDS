@@ -78,7 +78,7 @@ def main(_args, Type):
     if Type == 'PyTorch':
         mds = TorchMDS(mds_params, device=device)
         # mds = TorchMdsNp(mds_params, device=device)
-        mds = TorchMdsNp(mds_params, device=device)
+        # mds = TorchMdsNp(mds_params, device=device)
 
 
         # mds = TorchMDS(mds_params, device)
@@ -145,11 +145,11 @@ if __name__ == '__main__':
                         help='geodesic distance mat')
     parser.add_argument('--c', default=2, help="c = q/p, i.e. Nyquist ratio")
     parser.add_argument('--plot_flag', default=True)
-    parser.add_argument('--compute_full_stress_flag', default=True)
+    parser.add_argument('--compute_full_stress_flag', default=False)
     parser.add_argument('--display_every', default=100, help='display every n iterations')
     parser.add_argument('--max_size_for_pinv', default=1000, help='display every n iterations')
 
     _args = parser.parse_args()
     # main(_args, 'Both')
-    # main(_args, 'Numpy')
-    main(_args, 'PyTorch')
+    main(_args, 'Numpy')
+    # main(_args, 'PyTorch')
