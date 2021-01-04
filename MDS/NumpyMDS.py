@@ -31,7 +31,7 @@ class NumpyMDS(MDS):
         p_array = self.mds_params.p
         samples = self.mds_params.samples_array
 
-        alpha = np.zeros([p_array[0], self.mds_params.shape.dim])
+        # alpha = np.zeros([p_array[0], self.mds_params.shape.dim])
         intermediate_results_list = []
 
         for i in range(len(p_array)):
