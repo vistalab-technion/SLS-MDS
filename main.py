@@ -4,7 +4,7 @@ import torch
 
 import MDS.MdsConfig as MdsConfig
 from MDS.TorchMDS import TorchMDS
-# from MDS.TorchMdsNp import TorchMdsNp
+from MDS.TorchMdsNp import TorchMdsNp
 from Shape.NumpyShape import NumpyShape
 from Shape.Shape import Shape
 from MDS.NumpyMDS import NumpyMDS
@@ -29,7 +29,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 def main(_args, Type):
     print("start main")
 
-    device = torch.device("cpu")  # torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if Type == 'PyTorch':
         shape = TorchShape(device, filename=_args.filename)
         print(device)
@@ -78,6 +78,7 @@ def main(_args, Type):
     if Type == 'PyTorch':
         mds = TorchMDS(mds_params, device=device)
         # mds = TorchMdsNp(mds_params, device=device)
+        mds = TorchMdsNp(mds_params, device=device)
 
 
         # mds = TorchMDS(mds_params, device)
@@ -98,11 +99,12 @@ def main(_args, Type):
         phi = np.real(shape.evecs)
         # calc torch version
         new_x_t = mds_t.algorithm(d_mat_t, x0_t, phi_t)
-        shape_t.mesh.vertices = new_x_t
+        shape_t.mesh.vertices = new_x_t.cpu()
         tri_mesh_t = trimesh.Trimesh(shape_t.mesh.vertices, shape_t.mesh.faces)
-        fig2 = plt.figure()
-        plt.plot(mds.stress_list)
-        fig2.show()
+        fig1 = plt.figure()
+        plt.plot(mds_t.stress_list)
+        fig1.show()
+
         # tri_mesh_t.show()
 
     else:
@@ -122,10 +124,10 @@ def main(_args, Type):
     else:
         canonical_form_t = Shape(vertices=new_x_t.cpu(), faces=shape.mesh.faces)
         canonical_form = Shape(vertices=new_x, faces=shape.mesh.faces)
+        # shape.plot_embedding(canonical_form_t.mesh.vertices)
 
     # canonical_form.mesh.show()
     shape.plot_embedding(canonical_form.mesh.vertices)
-    shape.plot_embedding(canonical_form_t.mesh.vertices)
 
     print("end main")
 
@@ -144,10 +146,10 @@ if __name__ == '__main__':
     parser.add_argument('--c', default=2, help="c = q/p, i.e. Nyquist ratio")
     parser.add_argument('--plot_flag', default=True)
     parser.add_argument('--compute_full_stress_flag', default=True)
-    parser.add_argument('--display_every', default=10, help='display every n iterations')
+    parser.add_argument('--display_every', default=100, help='display every n iterations')
     parser.add_argument('--max_size_for_pinv', default=1000, help='display every n iterations')
 
     _args = parser.parse_args()
-    main(_args, 'Both')
+    # main(_args, 'Both')
     # main(_args, 'Numpy')
-    # main(_args, 'PyTorch')
+    main(_args, 'PyTorch')

@@ -62,7 +62,7 @@ class TorchMDS(MDS):
             alpha = torch.zeros([p, self.mds_params.shape.dim], dtype=torch.float64, device=self.device)
 
             x0_s = x0[samples[0:q], :]
-            w_s = self.compute_sub(self.mds_params.weights_t, samples[0:q]).to(self.device)
+            w_s = self.compute_sub(self.mds_params.weights, samples[0:q]).to(self.device)
             phi_s = phi[samples[0:q], 0:p]
             d_s = self.compute_sub(distances, samples[0:q])
             # v_s is the matrix v constructed from the sampled weights
