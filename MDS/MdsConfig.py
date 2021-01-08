@@ -27,9 +27,8 @@ class MdsParams:
         else:
             self.q = q
 
-    def set_weights(self, weights, weights_t=None):
+    def set_weights(self, weights):
         self.weights = weights
-        self.weights_t = weights_t
 
     def set_optim_param(self, max_iter, a_tol, r_tol):
         self.max_iter = max_iter

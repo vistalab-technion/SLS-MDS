@@ -25,6 +25,10 @@ class Shape:
 
         self.size = len(self.mesh.vertices)
         self.dim = len(self.mesh.vertices[0])
+        self.mass_mat, self.stiffness_mat = self.compute_laplacian()
+        self.eigs = np.array([])
+        self.evecs = np.array([])
+        self.weights = np.ones((self.size, self.size))
 
     def set_signal_type(self, signal_type):
         self.signal_type = signal_type
@@ -127,6 +131,21 @@ class Shape:
                 i += 1
 
         return [set_c, d_mat]
+
+    def compute_subspace(self, k):
+        print('start compute subspace')
+        if k == self.size:
+            self.eigs = np.ones(self.size)
+            self.evecs = np.eye(self.size)
+
+        else:
+            if (self.mass_mat.size == 0) or (self.stiffness_mat.size == 0):
+                self.compute_laplacian()
+            [eigs, evecs] = sp.eigs(self.stiffness_mat, k, self.mass_mat, sigma=0,
+                                    which='LM')  # sigma=0 gives 1/lambda -> LM gives smallest eigs
+            self.eigs = -np.real(eigs) # code above gives -eigs, so we invert the signs
+            self.evecs = np.real(evecs)
+            # TODO fix eigs (put '-' and 1/)
 
 
     def plot_embedding(self, vertices):

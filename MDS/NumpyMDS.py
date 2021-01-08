@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 import numpy as np
 from scipy import linalg
@@ -22,6 +23,9 @@ class NumpyMDS(MDS):
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
         self.logger.info("Numpy Logger")
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        self.logger.info(dt_string)
 
     # _s stands for sampled, _p stands for projected on subspace
     def algorithm(self, distances, x0, phi):
@@ -64,7 +68,7 @@ class NumpyMDS(MDS):
             v_s_x0_s = np.matmul(v_s, x0_s)
             x_s = x0_s
 
-            #self.logger.info("index = {}:\nx0_s = {}\nw_s = {}\nphi_s = {}\nd_s = {}\n"
+            # self.logger.info("index = {}:\nx0_s = {}\nw_s = {}\nphi_s = {}\nd_s = {}\n"
             #                 "v_s = {}\nv_s_p = {}\nv_s_P_i = {}\nz = {}\nv_s_x0_s = {}\n"
             #                 .format(i, x0_s, w_s, phi_s, d_s, v_s, v_s_p, v_s_p_i, z, v_s_x0_s))
 
@@ -77,7 +81,7 @@ class NumpyMDS(MDS):
                 if self.mds_params.plot_flag and \
                         (iter_count % self.mds_params.display_every) == 0:
                     if self.mds_params.plot_flag:
-                        self.plot_embedding(x0 + np.matmul(phi[:, 0:p], alpha))
+                        self.mds_params.shape.plot_embedding(x0 + np.matmul(phi[:, 0:p], alpha))
                         #TODO: change plot_embedding to work from shape
                     print(f'iter : {iter_count}, stress : {old_stress}')
                 # --------------------------------------------------------------------
@@ -124,5 +128,24 @@ class NumpyMDS(MDS):
         tmp0 = np.subtract(np.triu(dx_mat), np.triu(d_mat))
         tmp = np.power(tmp0, 2)
         return np.sum(np.multiply(np.triu(w_mat), tmp))
+
+    @staticmethod
+    def compute_mat_b(d_mat, dx_mat, w_mat):
+        b_mat = np.zeros(d_mat.shape)
+        try:
+            tmp = -np.multiply(w_mat, d_mat)
+            b_mat[dx_mat != 0] = np.divide(tmp[dx_mat != 0], dx_mat[dx_mat != 0])
+
+        except ZeroDivisionError:
+            print("divided by zero")
+
+        diag_mat_b = -np.diag(np.sum(b_mat, 1))
+        b_mat += diag_mat_b
+
+        return b_mat
+
+
+
+
 
 
