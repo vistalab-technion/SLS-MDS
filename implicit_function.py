@@ -18,7 +18,10 @@ class MDSLayer(Function):
 
     @staticmethod
     def forward(ctx, xn, d_mat, x0, phi, weights, samples):
-        # solve MDS
+
+        # TODO: here you need to solve MDS
+
+
         print("Forward")
         print(xn, d_mat, x0, phi, weights, samples)
         ctx.d_mat = torch.tensor(d_mat, requires_grad=True)
@@ -42,6 +45,8 @@ class MDSLayer(Function):
 
             def f(X):
 
+                # TODO: these functions were already implemented as part of the class,
+                #  but in numpy. They need to be implemeneted here in torch.
                 def V(w_mat):
                     mat_v = -w_mat + torch.diag(torch.diag(w_mat))
                     mat_v -= torch.diag(torch.sum(mat_v, 1))
@@ -64,15 +69,23 @@ class MDSLayer(Function):
                     b_mat += diag_mat_b
                     return b_mat
 
-            # TODO: write fixed point iteration for Eq. 18 in terms of X
-            alpha = phi.T
+                # TODO: write fixed point equation for Eq. 18 in terms of X
+                # alpha_{k+1} = g(alpha_k, X_0, D, W) - >  f(X_0, Phi, alpha,D,W,S)=0
+
+
+
+        # return:
+        #(-(df/dD)^{-1} @ (df/dX) ) @ dl/dX - > d loss /dD
+        #(-(df/dW)^{-1} @ (df/dX) ) @ dl/dX - > d loss /dW
+        # etc...
 
         dxn_dd_mat = None
         dxn_x0 = None
         dxn_dphi = None
         dxn_dweights = None
+        dxn_dsamples = None
         print(grad_outputs)
-        return None, dxn_dd_mat, dxn_x0, dxn_dphi, dxn_dweights, None
+        return None, dxn_dd_mat, dxn_x0, dxn_dphi, dxn_dweights, dxn_dsamples
 
 
 class DifferentiableMDS(Module):
