@@ -15,10 +15,10 @@ from MDS.NumpyMDS import NumpyMDS
 
 
 class MDSLayer(Function):
-
     @staticmethod
     def forward(ctx, xn, d_mat, x0, phi, weights, samples):
-        # solve MDS
+        # TODO: here you need to solve MDS
+
         print("Forward")
         print(xn, d_mat, x0, phi, weights, samples)
         ctx.d_mat = torch.tensor(d_mat, requires_grad=True)
@@ -42,6 +42,8 @@ class MDSLayer(Function):
 
             def f(X):
 
+                # TODO: these functions were already implemented as part of the class,
+                #  but in numpy. They need to be implemented here in torch.
                 def V(w_mat):
                     mat_v = -w_mat + torch.diag(torch.diag(w_mat))
                     mat_v -= torch.diag(torch.sum(mat_v, 1))
@@ -51,28 +53,33 @@ class MDSLayer(Function):
 
                 # TODO: transform into torch
                 def B(d_mat, dx_mat, w_mat):
-                    b_mat = np.zeros(d_mat.shape)
+                    b_mat = torch.zeros(d_mat.shape)
                     try:
-                        tmp = -np.multiply(w_mat, d_mat)
-                        b_mat[dx_mat != 0] = np.divide(tmp[dx_mat != 0],
-                                                       dx_mat[dx_mat != 0])
+                        tmp = -torch.multiply(w_mat, d_mat)
+                        b_mat[dx_mat != 0] = torch.true_divide(tmp[dx_mat != 0], dx_mat[dx_mat != 0])
 
                     except ZeroDivisionError:
                         print("divided by zero")
 
-                    diag_mat_b = -np.diag(np.sum(b_mat, 1))
+                    diag_mat_b = -torch.diagonal(torch.sum(b_mat, 1))
                     b_mat += diag_mat_b
                     return b_mat
 
-            # TODO: write fixed point iteration for Eq. 18 in terms of X
-            alpha = phi.T
+                # TODO: write fixed point equation for Eq. 18 in terms of X
+                # alpha_{k+1} = g(alpha_k, X_0, D, W) - >  f(X_0, Phi, alpha,D,W,S)=0
+
+        # return:
+        # (-(df/dD)^{-1} @ (df/dX) ) @ dl/dX - > d loss /dD
+        # (-(df/dW)^{-1} @ (df/dX) ) @ dl/dX - > d loss /dW
+        # etc...
 
         dxn_dd_mat = None
         dxn_x0 = None
         dxn_dphi = None
         dxn_dweights = None
+        dxn_dsamples = None
         print(grad_outputs)
-        return None, dxn_dd_mat, dxn_x0, dxn_dphi, dxn_dweights, None
+        return None, dxn_dd_mat, dxn_x0, dxn_dphi, dxn_dweights, dxn_dsamples
 
 
 class DifferentiableMDS(Module):
@@ -88,7 +95,7 @@ class DifferentiableMDS(Module):
     def forward(self):
         # SOLVING MDS
         xn = torch.tensor(self.mds.algorithm(self.d_mat, self.x0, self.phi),
-                           requires_grad=True)
+                          requires_grad=True)
         return MDSLayer.apply(xn, self.d_mat, self.x0, self.phi, self.weights,
                               self.samples)
 
@@ -118,24 +125,25 @@ def main(_args):
 
     diff_mds = DifferentiableMDS(mds, x0, phi, d_mat)
     xn = diff_mds.forward()
-    loss = sum(xn)**2
+    loss = sum(xn) ** 2
     loss.backward()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MDS args')
     parser.add_argument('--p', default=[100, 200], help='p is the number of frequencies or '
-                                                   'basis vectors')
+                                                        'basis vectors')
     parser.add_argument('--q', default=[200, 400], help='q is the number of samples')
     parser.add_argument('--max_iter', default=500)
     parser.add_argument('--a_tol', default=0.001, help="absolute tolerance")
     parser.add_argument('--r_tol', default=0.00001, help="relative tolerance")
-    parser.add_argument('--filename', default='input/cat3.off', help="file name")
-    parser.add_argument('--d_mat_input', default='input/D_cat3.mat',
+    parser.add_argument('--filename', default='input/dog0.off', help="file name")
+    parser.add_argument('--d_mat_input', default='input/D_dog0.mat',
                         help='geodesic distance mat')
     parser.add_argument('--c', default=2, help="c = q/p, i.e. Nyquist ratio")
-    parser.add_argument('--plot_flag', default=False)
+    parser.add_argument('--plot_flag', default=True)
     parser.add_argument('--compute_full_stress_flag', default=True)
-    parser.add_argument('--display_every', default=10, help='display every n iterations')
+    parser.add_argument('--display_every', default=40, help='display every n iterations')
     parser.add_argument('--max_size_for_pinv', default=1000,
                         help='display every n iterations')
 

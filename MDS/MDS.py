@@ -51,6 +51,7 @@ class MDS:
 
         diag_mat_b = -np.diag(np.sum(b_mat, 1))
         b_mat += diag_mat_b
+        # print(b_mat)
         return b_mat
 
     @staticmethod

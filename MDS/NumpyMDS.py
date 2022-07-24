@@ -13,15 +13,15 @@ class NumpyMDS(MDS):
 
     def __init__(self, params):
         MDS.__init__(self, params)
-        logging.basicConfig(filename='NumpyMDS.log', level=logging.INFO)
-
-        self.logger = logging.getLogger('NumpyMDS')
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
-        self.logger.info("Numpy Logger")
+        # logging.basicConfig(filename='NumpyMDS.log', level=logging.INFO)
+        #
+        # self.logger = logging.getLogger('NumpyMDS')
+        # ch = logging.StreamHandler()
+        # ch.setLevel(logging.DEBUG)
+        # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # ch.setFormatter(formatter)
+        # self.logger.addHandler(ch)
+        # self.logger.info("Numpy Logger")
 
     # _s stands for sampled, _p stands for projected on subspace
     def algorithm(self, distances, x0, phi):

@@ -1,15 +1,13 @@
 import scipy.sparse.linalg as sp
 import torch
-import trimesh
 import numpy as np
-import random
-from scipy import sparse
+
 
 from Shape.Shape import Shape
 
 
 class TorchShape(Shape):
-    def __init__(self, device, filename=None):
+    def __init__(self, filename=None, device=None):
         Shape.__init__(self, filename)
         self.mass_mat, self.stiffness_mat = self.compute_laplacian()
         self.weights = torch.ones((self.size, self.size), dtype=torch.float64, device=device)
@@ -18,7 +16,6 @@ class TorchShape(Shape):
         self.adjacency_mat = self.compute_adjacency_mat()
 
     def compute_subspace(self, k):
-        # TODO: move to Shape class
         # TODO: if k = n return identity
 
         print('start compute subspace')
@@ -31,7 +28,6 @@ class TorchShape(Shape):
 
     def compute_adjacency_mat(self):
         adjacency_mat = torch.zeros((self.size, self.size))
-        # TODO: move to Shape class
 
         for e in self.mesh.edges:
             adjacency_mat[e[0]][e[1]] = 1

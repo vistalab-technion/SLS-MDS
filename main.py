@@ -4,7 +4,6 @@ import torch
 
 import MDS.MdsConfig as MdsConfig
 from MDS.TorchMDS import TorchMDS
-from MDS.TorchMdsNp import TorchMdsNp
 from Shape.NumpyShape import NumpyShape
 from Shape.Shape import Shape
 from MDS.NumpyMDS import NumpyMDS
@@ -14,11 +13,6 @@ import scipy.io as sio
 import argparse
 import matplotlib.pyplot as plt
 import trimesh
-# import gdist
-import sys
-import matplotlib as mpl
-from mpl_toolkits.mplot3d import Axes3D
-# mpl.use('macosx')
 import os
 
 from Shape.TorchShape import TorchShape
@@ -31,7 +25,7 @@ def main(_args, Type):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if Type == 'PyTorch':
-        shape = TorchShape(device, filename=_args.filename)
+        shape = TorchShape(filename=_args.filename, device=device)
         print(device)
 
     elif Type == 'Numpy':
@@ -50,8 +44,6 @@ def main(_args, Type):
     # TODO: need to use standalone geodesic fucntion:
     #  d_mat_input = shape.compute_geodesics()
     d_mat_input = sio.loadmat(_args.d_mat_input)['D']
-    # n_faces = shape.mesh.faces.astype(int)
-    # g_mat = gdist.compute_gdist(shape.mesh.vertices, n_faces)
     mds_params = MdsConfig.MdsParams(shape, _args)
 
     mds_params.set_shape(shape)
@@ -77,11 +69,6 @@ def main(_args, Type):
     var_type = torch.float64
     if Type == 'PyTorch':
         mds = TorchMDS(mds_params, device=device)
-        # mds = TorchMdsNp(mds_params, device=device)
-        # mds = TorchMdsNp(mds_params, device=device)
-
-
-        # mds = TorchMDS(mds_params, device)
         phi = shape.evecs.type(var_type).to(device)
         d_mat = torch.tensor(d_mat, dtype=var_type, device=device)
         x0 = torch.tensor(x0, dtype=var_type, device=device)
@@ -104,26 +91,23 @@ def main(_args, Type):
         fig1 = plt.figure()
         plt.plot(mds_t.stress_list)
         fig1.show()
-
-        # tri_mesh_t.show()
-
     else:
         print("Type should be PyTorch, Numpy or Both")
         raise SystemExit()
 
     # TODO: change inputs from TrackedArray to ndarray and check speed
-    new_x = mds.algorithm(d_mat, x0, phi)
+    opt_x = mds.algorithm(d_mat, x0, phi)
     fig2 = plt.figure()
     plt.plot(mds.stress_list)
     fig2.show()
 
     if Type == 'PyTorch':
-        canonical_form = Shape(vertices=new_x.cpu(), faces=shape.mesh.faces)
+        canonical_form = Shape(vertices=opt_x.cpu(), faces=shape.mesh.faces)
     elif Type == 'Numpy':
-        canonical_form = Shape(vertices=new_x, faces=shape.mesh.faces)
+        canonical_form = Shape(vertices=opt_x, faces=shape.mesh.faces)
     else:
         canonical_form_t = Shape(vertices=new_x_t.cpu(), faces=shape.mesh.faces)
-        canonical_form = Shape(vertices=new_x, faces=shape.mesh.faces)
+        canonical_form = Shape(vertices=opt_x, faces=shape.mesh.faces)
         # shape.plot_embedding(canonical_form_t.mesh.vertices)
 
     # canonical_form.mesh.show()
@@ -151,5 +135,5 @@ if __name__ == '__main__':
 
     _args = parser.parse_args()
     # main(_args, 'Both')
-    main(_args, 'Numpy')
-    # main(_args, 'PyTorch')
+    # main(_args, 'Numpy')
+    main(_args, 'PyTorch')

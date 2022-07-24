@@ -14,25 +14,16 @@ class TorchMDS(MDS):
     def __init__(self, params, device):
         MDS.__init__(self, params)
         self.device = device
-        logging.basicConfig(filename='TorchMDS.log', level=logging.INFO)
-        self.logger = logging.getLogger('TorchMDS')
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - '
-                                      '%(message)s')
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
-        self.logger.info("PyTorch Logger")
 
-    # _s stands for sampled, _p stands for projected on subspace
     def algorithm(self, distances, x0, phi):
         """
+        _s stands for sampled, _p stands for projected on subspace
         :param distances: n x n - geodesic distance matrix. Should at least have distances
                         between points in sample set
         :param weights: n x n - symmetric weights for mds objective
         :param x0: n x embedding_dim - initial euclidean embedding
         :param phi: n x p_max - subspace
-        :return:
+        :return: xn: x0 + (phi * alpha_star) - the optimal solution of the mds algorithm
         """
         print("start algorithm")
         # extract parameters
@@ -40,15 +31,17 @@ class TorchMDS(MDS):
         p_array = self.mds_params.p  # array of p values, i.e., p = size of subspace
 
         samples = torch.from_numpy(np.asarray(self.mds_params.samples_array)).clone().to(self.device)
-        #x0_torch = torch.from_numpy(x0).to(self.device)
-
-        # alpha is the representation of the displacement field in the subspace
-        # alpha = torch.zeros([p_array[0], self.mds_params.shape.dim], dtype=torch.float64, device=self.device)
-        converged_flag = False
+        weights = self.mds_params.weights.to(self.device)
 
         intermediate_results_list = []
 
+        old_stress = torch.tensor([])
+
+        p = 0
+
+        xk = x0
         for i in range(len(p_array)):
+            converged = False
             # TODO: remove numpy dependencies. Optionally, we should normalize d_mat to\
             #  be between 0 and 1
 
@@ -58,52 +51,46 @@ class TorchMDS(MDS):
             if q < 2*p:
                 warnings.warn('"It is recommended that q will be least 2p"')
 
-            # extract samples from all variables
+            # alpha is the representation of the displacement field in the subspace
             alpha = torch.zeros([p, self.mds_params.shape.dim], dtype=torch.float64, device=self.device)
 
-            x0_s = x0[samples[0:q], :]
-            w_s = self.compute_sub(self.mds_params.weights, samples[0:q]).to(self.device)
+            # extract samples from all variables
+            xk_s = xk[samples[0:q], :]
+            w_s = self.compute_sub(weights, samples[0:q])
             phi_s = phi[samples[0:q], 0:p]
             d_s = self.compute_sub(distances, samples[0:q])
+
             # v_s is the matrix v constructed from the sampled weights
             v_s = self.compute_v(w_s)
-            v_s_p = torch.matmul(torch.matmul(torch.transpose(phi_s, 0, 1), v_s), phi_s)  # projection of v_s on phi_s
-            # v_s_p = np.matmul(np.matmul(np.transpose(phi_s.numpy()), v_s.numpy()),
-            #                   phi_s.numpy())  # projection of v_s on phi_s
-            # v_s_p = torch.from_numpy(v_s_p)
+            v_s_p = (torch.transpose(phi_s, 0, 1) @ v_s) @ phi_s  # projection of v_s on phi_s
 
-            v_s_p_inv = torch.pinverse(v_s_p)
+            if (v_s_p.shape[0] < xk.shape[0]) or \
+                    (p == self.mds_params.shape.size):
+                v_s_p_inv = torch.pinverse(v_s_p)
+            else:
+                print('"size too large for using pinv."')
+                raise SystemExit
+
             # TODO: check res - last time gave worng res vs linalg.pinv2(v_s_p)
-            z = torch.matmul(v_s_p_inv, torch.transpose(phi_s.data, 0, 1))  # z = pinv(phi_s'*v_s*phi_s)*phi_s'
-            v_s_x0_s = torch.matmul(v_s, x0_s)
-            # z = torch.from_numpy(np.matmul(v_s_p_inv.numpy(), torch.transpose(
-            #     phi_s.data, 0, 1).numpy()))  # z = pinv(phi_s'*v_s*phi_s)*phi_s'
-            # v_s_x0_s = torch.from_numpy(np.matmul(v_s.numpy(), x0_s.numpy()))
-            x_s = x0_s
+            z = v_s_p_inv @ torch.transpose(phi_s, 0, 1)
+            v_s_xk_s = v_s @ xk_s
+            x_s = xk_s
 
-            # self.logger.info("index = {}:\nx0_s = {}\nw_s = {}\nphi_s = {}\nd_s = {}\n"
-            #                  "v_s = {}\nv_s_p = {}\nv_s_P_i = {}\nz = {}\nv_s_x0_s = {}\n"
-            #                  .format(i, x0_s, w_s, phi_s, d_s, v_s, v_s_p, v_s_p_inv,
-            #                          z, v_s_x0_s))
-            # tmp = pdist(x_s, 'euclidean')
-            # d_euc_s_mat_np = squareform(tmp)
-            torch.tensor([12,2,5]).to(self.device)
             d_euc_s_mat_t = torch.cdist(x_s, x_s)
-            # TODO: squareform is actually redundant, we can use an upper triangular mat
-            # d_euc_s_mat = torch.tensor(d_euc_s_mat_np, dtype=torch.float64, device=self.device) #RuntimeError: CUDA error: an illegal memory access was encountered
+
             old_stress = self.compute_stress(d_s, d_euc_s_mat_t, w_s)
-            iter_count = 0
-            self.stress_list.append(old_stress)
-            while not converged_flag:
+            iter_count = 1
+            self.stress_list.append((1/(q*q))*old_stress.cpu().numpy())
+            while not converged:
                 # --------------------------  plotting --------------------------------
-                if self.mds_params.plot_flag and (iter_count % 100) == 0:
+                if self.mds_params.plot_flag and (iter_count % self.mds_params.display_every) == 0:
                     if self.device.type == 'cuda':
-                        self.plot_embedding(x0.cpu().numpy() + torch.matmul(
+                        self.plot_embedding(xk.cpu().numpy() + torch.matmul(
                             phi[:, 0:p], alpha).cpu().numpy())
                         print(f'iter : {iter_count}, stress : {old_stress}')
 
                     else:
-                        self.plot_embedding(x0 + torch.from_numpy(np.matmul(
+                        self.plot_embedding(xk + torch.from_numpy(np.matmul(
                             phi[:, 0:p].numpy(), alpha.numpy())))
                         print(f'iter : {iter_count}, stress : {old_stress}')
                 # --------------------------------------------------------------------
@@ -112,44 +99,30 @@ class TorchMDS(MDS):
                 # this is B from equation 5 in [1] computed on the sample set
                 # TODO: check if possible to remove numpy
 
-                y = torch.sub(torch.matmul(b_s, x_s), v_s_x0_s)
-                alpha = torch.matmul(z, y)
+                y = torch.sub(b_s @ x_s, v_s_xk_s)
+                alpha = z @ y
 
-                # alpha = torch.from_numpy(np.matmul(z.numpy(), y.numpy()))
-                x_s = torch.add(x0_s, torch.matmul(phi_s, alpha))
+                x_s = torch.add(xk_s, torch.matmul(phi_s, alpha))
                 d_euc_s_mat_t = torch.cdist(x_s, x_s)
 
-                # d_euc_s_mat_np = squareform(pdist(x_s, 'euclidean'))
                 # TODO: replace with dedicated function
-                # d_euc_s_mat = torch.from_numpy(d_euc_s_mat_np).type(torch.double)
 
                 # check convergence
                 new_stress = self.compute_stress(d_s, d_euc_s_mat_t, w_s)
-                # converged = (new_stress <= self.mds_params.a_tol) or \
-                #             (1 - (new_stress / old_stress) <= self.mds_params.r_tol) or \
-                #             (self.mds_params.max_iter <= iter_count)
-                converged_flag = self.mds_params.max_iter <= iter_count
+                converged = (new_stress <= self.mds_params.a_tol) or \
+                            (1 - (new_stress / old_stress) <= self.mds_params.r_tol) or \
+                            (self.mds_params.max_iter <= iter_count)
                 old_stress = new_stress
-                self.stress_list.append(old_stress)
+                self.stress_list.append((1 / (q * q)) * old_stress.cpu().numpy())
                 iter_count += 1
 
-                # TODO: fix convergence criterion
-                # converged = (new_stress <= self.mds_params.a_tol) or \
-                #             (1 - (new_stress / old_stress) <= self.mds_params.r_tol) or \
-                #             (self.mds_params.max_iter <= iter_count)
-
                 if self.mds_params.compute_full_embedding_flag:
-                    x = x0 + torch.matmul(phi[:, 0:p], alpha)
-
-                    # if self.device == 'cuda':
-                    #     x = (x0 + torch.matmul(phi[:, 0:p], alpha)).cpu().numpy()
-                    # else:
-                    #     x = x0 + np.matmul(phi[:, 0:p], alpha)
+                    x = xk + torch.matmul(phi[:, 0:p], alpha)
                     if self.mds_params.compute_full_stress_flag:
                         intermediate_results_list.append(x)
-            x0 = x0 + torch.matmul(phi[:, 0:p], alpha)
-
-        return x0 + torch.matmul(phi[:, 0:p], alpha)
+            xk = xk + torch.matmul(phi[:, 0:p], alpha)
+        print(f'final stress : {old_stress.data}')
+        return xk + torch.matmul(phi[:, 0:p], alpha)
 
     @staticmethod
     def compute_v(w_mat):
@@ -158,11 +131,10 @@ class TorchMDS(MDS):
 
         return mat_v
 
-    # @staticmethod
     def compute_mat_b(self, d_mat, dx_mat, w_mat):
-        b_mat = torch.zeros(d_mat.shape, dtype=torch.float64, device=self.device)
+        b_mat = torch.zeros(d_mat.shape, dtype=torch.float64).to(device=self.device)
         try:
-            tmp = -torch.matmul(w_mat, d_mat)
+            tmp = -torch.mul(w_mat, d_mat)
             b_mat[dx_mat != 0] = torch.true_divide(tmp[dx_mat != 0], dx_mat[dx_mat != 0])
 
         except ZeroDivisionError:
@@ -184,17 +156,3 @@ class TorchMDS(MDS):
         tmp0 = torch.sub(torch.triu(d_euc_mat), torch.triu(d_mat))
         tmp = torch.pow(tmp0, 2)
         return torch.sum(torch.mul(torch.triu(w_mat), tmp))
-
-    # @staticmethod
-    # def compute_mat_b(d_mat, dx_mat, w_mat):
-    #     b_mat = np.zeros(d_mat.shape)
-    #     try:
-    #         tmp = -np.multiply(w_mat, d_mat)
-    #         b_mat[dx_mat != 0] = np.divide(tmp[dx_mat != 0], dx_mat[dx_mat != 0])
-    #
-    #     except ZeroDivisionError:
-    #         print("divided by zero")
-    #
-    #     diag_mat_b = -np.diag(np.sum(b_mat, 1))
-    #     b_mat += diag_mat_b
-    #     return b_mat
