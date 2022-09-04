@@ -17,7 +17,6 @@ from MDS.NumpyMDS import NumpyMDS
 class MDSLayer(Function):
     @staticmethod
     def forward(ctx, xn, d_mat, x0, phi, weights, samples):
-        # TODO: here you need to solve MDS
 
         print("Forward")
         print(xn, d_mat, x0, phi, weights, samples)
@@ -41,27 +40,22 @@ class MDSLayer(Function):
             d_mat = ctx.d_mat
 
             def f(X):
-
-                # TODO: these functions were already implemented as part of the class,
-                #  but in numpy. They need to be implemented here in torch.
-                def V(w_mat):
+                def compute_v(w_mat):
                     mat_v = -w_mat + torch.diag(torch.diag(w_mat))
                     mat_v -= torch.diag(torch.sum(mat_v, 1))
+
                     return mat_v
 
-                pass
-
-                # TODO: transform into torch
-                def B(d_mat, dx_mat, w_mat):
-                    b_mat = torch.zeros(d_mat.shape)
+                def compute_mat_b(self, d_mat, dx_mat, w_mat):
+                    b_mat = torch.zeros(d_mat.shape, dtype=torch.float64).to(device=self.device)
                     try:
-                        tmp = -torch.multiply(w_mat, d_mat)
+                        tmp = -torch.mul(w_mat, d_mat)
                         b_mat[dx_mat != 0] = torch.true_divide(tmp[dx_mat != 0], dx_mat[dx_mat != 0])
 
                     except ZeroDivisionError:
                         print("divided by zero")
 
-                    diag_mat_b = -torch.diagonal(torch.sum(b_mat, 1))
+                    diag_mat_b = -torch.diag(torch.sum(b_mat, 1))
                     b_mat += diag_mat_b
                     return b_mat
 
