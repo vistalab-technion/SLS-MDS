@@ -8,9 +8,9 @@ from Shape.Shape import Shape
 
 
 class NumpyShape(Shape):
-    def __init__(self, filename=None):
-        Shape.__init__(self, filename)
-        if filename is not None:
+    def __init__(self, args):
+        Shape.__init__(self, args)
+        if args.filename is not None:
             self.mass_mat, self.stiffness_mat = self.compute_laplacian()
             self.eigs = np.array([])
             self.evecs = np.array([])
@@ -30,7 +30,6 @@ class NumpyShape(Shape):
                                     which='LM')  # sigma=0 gives 1/lambda -> LM gives smallest eigs
             self.eigs = -np.real(eigs) # code above gives -eigs, so we invert the signs
             self.evecs = np.real(evecs)
-            # TODO fix eigs (put '-' and 1/)
 
     def compute_adjacency_mat(self):
         adjacency_mat = np.zeros((self.size, self.size))

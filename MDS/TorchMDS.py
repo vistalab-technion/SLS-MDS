@@ -1,12 +1,7 @@
 import numpy as np
 import torch
-from scipy import linalg
-from scipy.spatial.distance import pdist, squareform
-import matplotlib.pyplot as plt
 import warnings
 from MDS.MDS import MDS
-from SignalType import SignalType
-import logging
 
 
 class TorchMDS(MDS):
@@ -38,12 +33,11 @@ class TorchMDS(MDS):
         old_stress = torch.tensor([])
 
         p = 0
+        q = 0
 
         xk = x0
         for i in range(len(p_array)):
             converged = False
-            # TODO: remove numpy dependencies. Optionally, we should normalize d_mat to\
-            #  be between 0 and 1
 
             q = q_array[i]  # q is the number of samples
             p = p_array[i]  # p is the number of frequencies\ basis vectors
@@ -71,7 +65,6 @@ class TorchMDS(MDS):
                 print('"size too large for using pinv."')
                 raise SystemExit
 
-            # TODO: check res - last time gave worng res vs linalg.pinv2(v_s_p)
             z = v_s_p_inv @ torch.transpose(phi_s, 0, 1)
             v_s_xk_s = v_s @ xk_s
             x_s = xk_s
@@ -80,13 +73,13 @@ class TorchMDS(MDS):
 
             old_stress = self.compute_stress(d_s, d_euc_s_mat_t, w_s)
             iter_count = 1
-            self.stress_list.append((1/(q*q))*old_stress.cpu().numpy())
+            self.stress_list.append((1/(q*q))*old_stress.cpu().detach().numpy())
             while not converged:
                 # --------------------------  plotting --------------------------------
                 if self.mds_params.plot_flag and (iter_count % self.mds_params.display_every) == 0:
                     if self.device.type == 'cuda':
-                        self.plot_embedding(xk.cpu().numpy() + torch.matmul(
-                            phi[:, 0:p], alpha).cpu().numpy())
+                        self.plot_embedding(xk.cpu().detach().numpy() + torch.matmul(
+                            phi[:, 0:p], alpha).cpu().detach().numpy())
                         print(f'iter : {iter_count}, stress : {old_stress}')
 
                     else:
@@ -97,7 +90,6 @@ class TorchMDS(MDS):
 
                 b_s = self.compute_mat_b(d_s, d_euc_s_mat_t, w_s)
                 # this is B from equation 5 in [1] computed on the sample set
-                # TODO: check if possible to remove numpy
 
                 y = torch.sub(b_s @ x_s, v_s_xk_s)
                 alpha = z @ y
@@ -113,7 +105,7 @@ class TorchMDS(MDS):
                             (1 - (new_stress / old_stress) <= self.mds_params.r_tol) or \
                             (self.mds_params.max_iter <= iter_count)
                 old_stress = new_stress
-                self.stress_list.append((1 / (q * q)) * old_stress.cpu().numpy())
+                self.stress_list.append((1 / (q * q)) * old_stress.cpu().detach().numpy())
                 iter_count += 1
 
                 if self.mds_params.compute_full_embedding_flag:
@@ -121,6 +113,8 @@ class TorchMDS(MDS):
                     if self.mds_params.compute_full_stress_flag:
                         intermediate_results_list.append(x)
             xk = xk + torch.matmul(phi[:, 0:p], alpha)
+
+        self.mds_params.set_p_q([p], [q])
         print(f'final stress : {old_stress.data}')
         return xk + torch.matmul(phi[:, 0:p], alpha)
 

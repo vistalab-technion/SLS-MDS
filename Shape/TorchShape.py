@@ -7,13 +7,15 @@ from Shape.Shape import Shape
 
 
 class TorchShape(Shape):
-    def __init__(self, filename=None, device=None):
-        Shape.__init__(self, filename)
-        self.mass_mat, self.stiffness_mat = self.compute_laplacian()
-        self.weights = torch.ones((self.size, self.size), dtype=torch.float64, device=device)
-        self.eigs = torch.tensor
-        self.evecs = torch.tensor
-        self.adjacency_mat = self.compute_adjacency_mat()
+    def __init__(self, args, device=None):
+        Shape.__init__(self, args)
+        self.args = args
+        if args.filename is not None:
+            self.mass_mat, self.stiffness_mat = self.compute_laplacian()
+            self.weights = torch.ones((self.size, self.size), dtype=torch.float64, device=device)
+            self.eigs = torch.tensor
+            self.evecs = torch.tensor
+            self.adjacency_mat = self.compute_adjacency_mat()
 
     def compute_subspace(self, k):
         # TODO: if k = n return identity

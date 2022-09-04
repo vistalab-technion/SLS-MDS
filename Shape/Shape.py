@@ -1,24 +1,29 @@
-import scipy.sparse.linalg as sp
 import trimesh
 import numpy as np
 import random
 import matplotlib.pyplot as plt
 from scipy import sparse
-
+import pygeodesic.geodesic as geodesic
 from SignalType import SignalType
+# import gdist
+# from torch_geometric.utils.geodesic import geodesic_distance
+import scipy.io as sio
+
+
 random.seed(10)
 
 
 class Shape:
-
-    def __init__(self, filename=None, vertices=None, faces=None):
+    def __init__(self, args):
         self.signal_type = SignalType.MESH
+        self.args = args
+        if args.filename is not None:
+            self.filename = args.filename.split('.')[0]
 
-        if filename is not None:
-            self.mesh = trimesh.load_mesh(filename, process=False)
-
-        elif vertices is not None and faces is not None:
-            self.mesh = trimesh.Trimesh(vertices, faces)
+            self.mesh = trimesh.load_mesh(args.filename, process=False)
+            # self.mesh.show()
+        elif args.vertices is not None and args.faces is not None:
+            self.mesh = trimesh.Trimesh(args.vertices, args.faces)
         else:
             print("Shape should get 'filename' or 'vertices and faces'")
             raise SystemError()
@@ -61,7 +66,6 @@ class Shape:
         j = np.concatenate((i2, i1, i3, i2, i1, i3, i1, i2, i3), 0)
 
         # values corresponding to pairs form(i, j)
-
         v = np.concatenate((cot12, cot12, cot23, cot23, cot31, cot31, diag1, diag2, diag3), 0)
 
         stiffness = sparse.coo_matrix((v, (i, j)), (nv, nv))
@@ -78,7 +82,7 @@ class Shape:
 
     def sample_mesh_fps(self, k, d_mat=None):
         """
-        The function samples points from the mesh according to farthest point sampling
+        The function samples points from the mesh according to the farthest point sampling
          strategy
 
         :param k: number of sample points.
@@ -88,57 +92,96 @@ class Shape:
         """
 
         print("sample_mesh\n")
+        if d_mat:
+            if d_mat.endswith('.npy'):
+                d_mat = np.load(d_mat)
+            elif d_mat.endswith('.mat'):
+                d_mat = sio.loadmat(d_mat)['D']
+            else:
+                print('file must endwith .npy or .mat')
+
 
         if k == len(self.mesh.vertices):
             set_c = range(0, len(self.mesh.vertices))
-            # TODO: compute geodesic distances
             if d_mat is None:
-                raise NotImplementedError('Compute geodesic in not implemented yet')
-                # todo: compute dist func
-                d = self.compute_geodesics()
+                d_mat = self.compute_geodesics()
+                np.save(f"{self.filename}_geo_dist_full", d_mat)
         else:
             compute_d_mat_flag = False
             if d_mat is None:
                 compute_d_mat_flag = True
+                d_mat = np.zeros((self.size, self.size))
 
-            x_idx = random.randint(0, self.size)  # choose index of vertex from 0 to sizeof(vertices)
+            # choose index of vertex from 0 to sizeof(vertices)
+            x_idx = random.randint(0, self.size)
             set_c = [x_idx]
             distances_from_set_c = np.empty(self.size, dtype=np.float32)
             distances_from_set_c.fill(np.inf)
-            # r = 200
             i = 0
-            if compute_d_mat_flag:
-                d_mat = np.zeros((self.size, self.size))
 
             while i < k - 1:
+                # saving distances ,if distance map is available, no need to compute distances from points to mesh
+                # d = distance from x to all points on the mesh
                 if compute_d_mat_flag:
-                    raise NotImplementedError('Compute geodesic in not implemented yet')
-                    # todo: compute dist func
                     d = self.compute_geodesics(x_idx)
-                    d_mat[:, x_idx] = d  # saving distances ,if distance map is
-                    # available, no need to compute distances from points to mesh
+                    d_mat[:, x_idx] = d
+                    d_mat[x_idx, :] = d
                 else:
-                    d = d_mat[:, x_idx] # distance of all points on the mesh from x
-
+                    d = d_mat[:, x_idx]
+                # np.save(f"{self.filename}/geo_dist_vector_{x_idx}", d)
                 distances_from_set_c = np.minimum(distances_from_set_c, d)
                 r = max(distances_from_set_c)
                 x_idx = np.where(distances_from_set_c == r)[0][0]
                 set_c.append(x_idx)
                 i += 1
+            np.save(f"{self.filename}_geo_dist_s", d_mat)
 
         return [set_c, d_mat]
 
+    def compute_geodesics(self, source_index=None):
+        print("compute geodesic distance")
+        vertices = np.array(self.mesh.vertices).astype(np.float64)
+        faces = np.array(self.mesh.faces).astype(np.int32)
+        geo_alg = geodesic.PyGeodesicAlgorithmExact(vertices, faces)
+
+        if source_index is None:
+            dist = np.zeros((vertices.shape[0], vertices.shape[0]))
+            for index1, var1 in enumerate(vertices):
+                for index2, var2 in enumerate(vertices):
+                    source_index = np.array(index1)
+                    target_index = np.array(index2)
+
+                    if source_index < target_index:
+                        distance, path = geo_alg.geodesicDistance(source_index, target_index)
+
+                        # distance = gdist.compute_gdist(vertices, faces, source_index, target_index)
+                        dist[source_index][target_index] = distance
+                        dist[target_index][source_index] = distance
+
+        else:
+            source_index = np.array([source_index], dtype=np.int32)
+            dist = np.zeros(vertices.shape[0])
+            for target_index, val in enumerate(vertices):
+                if dist[target_index] == 0:
+                    target_index = np.array([target_index], dtype=np.int32)
+                    # distance = gdist.compute_gdist(vertices, faces, source_index, target_index)
+                    distance, path = geo_alg.geodesicDistance(source_index, target_index)
+
+                    if target_index % 2000 == 0:
+                        print(f"target index = {target_index}, source index = {source_index}")
+                    dist[target_index] = distance
+
+        return dist
 
     def plot_embedding(self, vertices):
-            x = vertices[:, 0]
-            y = vertices[:, 1]
-            z = vertices[:, 2]
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            ax.scatter(x, y, z)
-            self.set_axes_equal(ax)
-            fig.show()
-
+        x = vertices[:, 0]
+        y = vertices[:, 1]
+        z = vertices[:, 2]
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(x, y, z)
+        self.set_axes_equal(ax)
+        fig.show()
 
     @staticmethod
     def set_axes_radius(ax, origin, radius):
@@ -147,13 +190,13 @@ class Shape:
         ax.set_zlim3d([origin[2] - radius, origin[2] + radius])
 
     def set_axes_equal(self, ax):
-        '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
+        """Make axes of 3D plot have equal scale so that spheres appear as spheres,
         cubes as cubes, etc..  This is one possible solution to Matplotlib's
         ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
 
         Input
           ax: a matplotlib axis, e.g., as output from plt.gca().
-        '''
+        """
 
         limits = np.array([
             ax.get_xlim3d(),
