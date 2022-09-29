@@ -5,7 +5,7 @@ from torch import sum
 from torch.nn import Module
 from typing import Any
 from torch.autograd import Function
-from torch.autograd.functional import jacobian
+from torch.autograd.functional import jacobian, jvp, vjp
 import MDS.MdsConfig as MdsConfig
 from MDS.TorchMDS import TorchMDS
 from Shape.TorchShape import TorchShape
@@ -182,40 +182,40 @@ class MDSLayer(Function):
         # -(df/dD)^{-1} @ ((df/dX)  @ dl/dX) - > d loss /dD
         # -(df/dW)^{-1} @ ((df/dX)  @ dl/dX) - > d loss /dW
         # etc...
+        # grad_outputs = grad_outputs
+        print(f'grad_outputs= {grad_outputs}')
 
-        df_dxn = jacobian(f_xn, (opt_x))[0][0]  # error: cuda out of memory
-        print(f'df_dxn: max={torch.max(df_dxn)}, min={torch.min(df_dxn)}')
+        df_dxn = jacobian(f_xn, opt_x)[0][0]
+        dxn_df = torch.linalg.pinv(df_dxn)
 
         df_dx0 = jacobian(f_x0, x0)[0][0]
-        print(f'df_dx0: max={torch.max(df_dx0)}, min={torch.min(df_dx0)}')
-
-        # todo: # error: cuda out of memory, fix: add for loop that calculate jacobian for 400(+,-) iter.
-        df_dphi = jacobian(f_phi, (phi))[0][0]
-        print(f'df_dphi: max={torch.max(df_dphi)}, min={torch.min(df_dphi)}')
-
-        df_dd = jacobian(f_d, d)[0][0]
-        print(f'df_dd: max={torch.max(df_dd)}, min={torch.min(df_dd)}')
-
-        df_dw = jacobian(f_w, w)[0][0]
-        print(f'df_dw: max={torch.max(df_dw)}, min={torch.min(df_dw)}')
-        # end todo
-        df_dxn_grad = df_dxn @ grad_outputs[0].t()
-
-        dxn_dx0 = torch.true_divide(1, df_dx0.t()) @ df_dxn_grad
+        df_dx0_grad = df_dx0 @ grad_outputs[0].t()
+        dxn_dx0 = -(dxn_df @ df_dx0_grad)
         dxn_dx0 = dxn_dx0.t()
-        torch.save(dxn_dx0, "output/dxn_dx0.pt")
 
-        dxn_dd_mat = torch.true_divide(1, df_dd.t()) @ df_dxn_grad
-        torch.save(dxn_dd_mat, "output/dxn_dd_mat.pt")
+        # df_dphi = jacobian(f_phi, phi[:, :50])[0][0]
 
-        dxn_dweights = torch.true_divide(1, df_dw.t()) @ df_dxn_grad
-        torch.save(dxn_dweights, "output/dxn_dweights.pt")
+        grad_outputs_mat_d_w = torch.ones((d.shape[0], d.shape[1]), device=_args.device)
+        grad_outputs_phi = torch.ones((phi.shape[0], phi.shape[1]), device=_args.device)
 
-        dxn_dphi = torch.true_divide(1, df_dphi.t()) @ df_dxn_grad
-        dxn_dphi = dxn_dphi.t()
-        torch.save(dxn_dphi, "output/dxn_dphi.pt")
+        grad_outputs_mat_d_w = torch.mul(grad_outputs_mat_d_w, grad_outputs[0][0][0])
+        grad_outputs_phi = torch.mul(grad_outputs_phi, grad_outputs[0][0][0])
+        # grad_outputs_x0 = grad_outputs[0].clone()
 
-        return None, dxn_dx0, dxn_dd_mat, dxn_dphi, dxn_dweights, None, None
+        df_dd_grad_jvp = jvp(f_d, d, grad_outputs_mat_d_w)
+        dxn_dd = - (df_dd_grad_jvp[1] @ dxn_df)
+
+        df_dw_grad_jvp = jvp(f_w, w, grad_outputs_mat_d_w)
+        dxn_dw = - (df_dw_grad_jvp[1] @ dxn_df)
+
+        df_dphi_grad_jvp = jvp(f_phi, phi, grad_outputs_phi)
+        dxn_dphi = - (dxn_df @ df_dphi_grad_jvp[1])  # shape should be [size (3400), 200]
+
+        # df_dx0_grad_jvp = jvp(f_x0, x0, grad_outputs_x0)
+        # dxn_dx0 = dxn_df @ df_dx0_grad_jvp[1]
+        yop
+
+        return None, dxn_dx0, dxn_dd, dxn_dphi, dxn_dw, None, None
 
 class MDSLayer_s(Function):
     @staticmethod
@@ -307,40 +307,32 @@ class MDSLayer_s(Function):
         # -(df/dW)^{-1} @ ((df/dX)  @ dl/dX) - > d loss /dW
         # etc...
 
-        # torch.save(df_dx0, "output/df_dx0.pt")
-        # df_dxn = torch.load("output/df_dxn.pt")
-        # print(f'df_dxn: max={torch.max(df_dxn)}, min={torch.min(df_dxn)}')
+        df_d_x_x0_phi_s = jacobian(f_x_x0_phi, (x_s, x0_s, phi_s))
         #
-        # df_dx0 = torch.load("output/df_dx0.pt")
-        # print(f'df_dx0: max={torch.max(df_dx0)}, min={torch.min(df_dx0)}')
-        df_dd_s = jacobian(f_d, d_s)[0][0]
-        df_dw_s = jacobian(f_w, w_s)[0][0]
-        print(f'df_dd_s: max={torch.max(df_dd_s)}, min={torch.min(df_dd_s)}')
-        print(f'df_dw_s: max={torch.max(df_dw_s)}, min={torch.min(df_dw_s)}')
-
-        df_d_x_x0_phi_s = jacobian(f_x_x0_phi, (x_s, x0_s, phi_s))  # error: cuda out of memory
-
         for index, mat in enumerate(df_d_x_x0_phi_s):
             print(f'df_d_x_x0_phi_s[{index}]: max={torch.max(mat)}, min={torch.min(mat)}')
         df_dxn_s = df_d_x_x0_phi_s[0][0][0]
         df_dx0_s = df_d_x_x0_phi_s[1][0][0]
         df_dphi_s = df_d_x_x0_phi_s[2][0][0]
+        dxn_df = torch.linalg.pinv(df_dxn_s)  # check
 
-        df_dxn_grad = df_dxn_s @ grad_outputs[0].t()
+        grad_outputs_mat_d_w = torch.ones((d_s.shape[0], d_s.shape[1]), device=_args.device)
+        grad_outputs = grad_outputs[0]
 
-        dxn_dx0 = torch.true_divide(1, df_dx0_s.t()) @ df_dxn_grad
+        df_dx0_grad = df_dx0_s @ grad_outputs.t()
+        dxn_dx0 = -(dxn_df @ df_dx0_grad)
         dxn_dx0 = dxn_dx0.t()
-        torch.save(dxn_dx0, "output/dxn_dx0.pt")
 
-        dxn_dd_mat = torch.true_divide(1, df_dd_s.t()) @ df_dxn_grad
-        torch.save(dxn_dd_mat, "output/dxn_dd_mat.pt")
+        grad_outputs_mat_d_w = torch.mul(grad_outputs_mat_d_w, grad_outputs[0][0])
 
-        dxn_dweights = torch.true_divide(1, df_dw_s.t()) @ df_dxn_grad
-        torch.save(dxn_dweights, "output/dxn_dweights.pt")
+        df_dphi_grad = df_dphi_s.t() @ grad_outputs
+        dxn_dphi = -(dxn_df.t() @ df_dphi_grad.t())
 
-        dxn_dphi = torch.true_divide(1, df_dphi_s.t()) @ df_dxn_grad
-        dxn_dphi = dxn_dphi.t()
-        torch.save(dxn_dphi, "output/dxn_dphi.pt")
+        _, df_dd_grad = jvp(f_d, d_s, grad_outputs_mat_d_w)
+        _, df_dw_grad = jvp(f_w, w_s, grad_outputs_mat_d_w)
+
+        dxn_dd_mat = - (df_dd_grad @ dxn_df)
+        dxn_dweights = - (df_dw_grad @ dxn_df)
 
         return None, dxn_dx0, dxn_dd_mat, dxn_dphi, dxn_dweights, None, None
 
@@ -423,7 +415,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_size_for_pinv', type=int,  default=1000,
                         help='display every n iterations')
     parser.add_argument('--device', type=int, default='0',  help='cuda device')
-    parser.add_argument('--is_samples', type=bool, default=True,
+    parser.add_argument('--is_samples', type=bool, default=False,
                         help='if true use samples for DifferentiableMDS - MDSLayer')
 
     _args = parser.parse_args()
